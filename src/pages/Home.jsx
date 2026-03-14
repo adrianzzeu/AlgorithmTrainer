@@ -5,6 +5,7 @@ import { dynamicRoutes } from '../utils/routes';
 
 const ICONS = {
   LearnBasics: BookOpenCheck,
+  BoothDefault: Binary,
   BoothRadix3: Binary,
   BoothRadix4: Cpu,
 };
@@ -30,8 +31,8 @@ export default function Home() {
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300 md:text-lg">
                 This project now opens like a guided studio: start with representation basics,
-                then move into the Radix-3 and Radix-4 algorithm labs with the step tables,
-                truth tables, and practice flow preserved.
+                then move into the standard Booth, Radix-3, and Radix-4 algorithm labs with
+                the step tables, truth tables, and practice flow preserved.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">

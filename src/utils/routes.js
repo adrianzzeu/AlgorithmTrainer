@@ -19,8 +19,17 @@ const ROUTE_META = {
     description: 'Learn sign-magnitude, two\'s complement, fixed-point scaling, and width selection.',
     badge: 'Foundation Lab',
   },
-  BoothRadix3: {
+  BoothDefault: {
     order: 2,
+    path: '/boothdefault',
+    name: 'Booth Default',
+    navName: 'Booth Default',
+    group: 'algorithm',
+    description: 'Walk through the standard Booth multiplier with Q[0]Q[-1] decisions, arithmetic shifts, and practice mode.',
+    badge: 'Algorithm Lab',
+  },
+  BoothRadix3: {
+    order: 3,
     path: '/boothradix3',
     name: 'Booth Radix-3',
     navName: 'Radix-3',
@@ -29,7 +38,7 @@ const ROUTE_META = {
     badge: 'Algorithm Lab',
   },
   BoothRadix4: {
-    order: 3,
+    order: 4,
     path: '/boothradix4',
     name: 'Booth Radix-4',
     navName: 'Radix-4',
