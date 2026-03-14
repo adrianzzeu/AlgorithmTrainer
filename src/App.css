@@ -453,9 +453,26 @@ img {
 }
 
 .summary-banner {
+  position: relative;
+  z-index: 20;
+  overflow: visible;
   background:
     linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(180, 83, 9, 0.08)),
     var(--panel);
+}
+
+.step-table-surface {
+  position: relative;
+  z-index: 1;
+}
+
+.hover-info {
+  position: relative;
+  z-index: 30;
+}
+
+.hover-info-panel {
+  z-index: 120;
 }
 
 .table-band-amber {
