@@ -87,7 +87,8 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
     let A_sum = A;
     let ovr = "0";
 
-    const currentStepCount = getCountStr(i + 1, lastDisplayedCount);
+    const currentStepCount = getCountStr(i, lastDisplayedCount);
+    const displayCount = (i === 0) ? "" : currentStepCount;
 
     if (op !== 0) {
       const operand = op === 1 ? M : M_neg;
@@ -100,7 +101,7 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
         id: `op_${i}`,
         type: "op",
         blockId: i,
-        count: currentStepCount,
+        count: displayCount,
         ovr,
         A_before: A,
         A_operand: operand,
@@ -129,7 +130,7 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
       id: `state_shift_${i}`,
       type: "state",
       blockId: i,
-      count: (op !== 0) ? "" : currentStepCount,
+      count: (op !== 0) ? "" : displayCount,
       ovr,
       A,
       Q_extra,
