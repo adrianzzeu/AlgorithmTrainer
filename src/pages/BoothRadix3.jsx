@@ -580,7 +580,7 @@ export default function App() {
               <GraduationCap className="text-blue-600 dark:text-blue-400 w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200">Modified Booth</h1>
+              <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200">Booth Radix-3 </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Integer + fractional fixed-point
               </p>
