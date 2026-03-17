@@ -87,6 +87,8 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
     let A_sum = A;
     let ovr = "0";
 
+    const currentStepCount = getCountStr(i + 1, lastDisplayedCount);
+
     if (op !== 0) {
       const operand = op === 1 ? M : M_neg;
       const addRes = addBinaryStr(A, operand);
@@ -98,7 +100,7 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
         id: `op_${i}`,
         type: "op",
         blockId: i,
-        count: "",
+        count: currentStepCount,
         ovr,
         A_before: A,
         A_operand: operand,
@@ -127,7 +129,7 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
       id: `state_shift_${i}`,
       type: "state",
       blockId: i,
-      count: isFinal ? "" : getCountStr(i + 1, lastDisplayedCount),
+      count: (op !== 0) ? "" : currentStepCount,
       ovr,
       A,
       Q_extra,
@@ -1119,7 +1121,9 @@ export default function App() {
                           key={step.id}
                           className={`border-b border-slate-100 dark:border-slate-800 ${isActive ? "table-band-sky" : "table-band-slate"}`}
                         >
-                          <td className="py-3 px-3 text-center text-slate-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700"></td>
+                          <td className="py-3 px-3 text-center text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 align-top font-mono text-[16px]">
+                            {step.count}
+                          </td>
 
                           <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
                             <div className="text-[13px] font-bold text-blue-600 dark:text-blue-400">op</div>
