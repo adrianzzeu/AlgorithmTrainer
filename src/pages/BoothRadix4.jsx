@@ -149,12 +149,6 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
             });
         }
 
-        steps.push({
-            id: `arrow_${i}`,
-            type: "arrow",
-            evalCtx,
-        });
-
         const combined = A + Q + Q_ED;
         const shifted = combined[0].repeat(2) + combined.slice(0, combined.length - 2);
 
@@ -1060,9 +1054,11 @@ export default function Radix4BoothApp() {
                             ${step.isFinal ? "table-band-rose border-2 border-red-400 dark:border-red-500/70" : ""}
                             ${step.isMathResult ? "table-band-sky" : ""}
                             ${isActive && !step.isFinal ? "table-band-amber" : ""}
-                            ${!step.isMathResult && !step.isFinal
-                                                            ? "border-slate-100 dark:border-slate-800"
-                                                            : "border-slate-200 dark:border-slate-700"
+                            ${!step.isMathResult && !step.isFinal && !step.isInit
+                                                            ? "border-t-[3px] border-t-slate-300 dark:border-t-slate-600 border-b border-slate-100 dark:border-slate-800"
+                                                            : !step.isMathResult && !step.isFinal
+                                                                ? "border-slate-100 dark:border-slate-800"
+                                                                : "border-slate-200 dark:border-slate-700"
                                                         }
                           `}
                                                 >
@@ -1095,6 +1091,11 @@ export default function Radix4BoothApp() {
                                                         {step.isInit && renderBits(mExt, true)}
                                                         {step.isMathResult && <span className="font-semibold text-slate-800 dark:text-slate-100">A after op</span>}
                                                         {step.isFinal && <span className="font-semibold table-text-rose">Final</span>}
+                                                        {!step.isInit && !step.isMathResult && !step.isFinal && (
+                                                            <span className="font-mono text-[11px] text-violet-600 dark:text-violet-400 whitespace-nowrap font-bold">
+                                                                ARS by 2 ↘
+                                                            </span>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
@@ -1109,46 +1110,25 @@ export default function Radix4BoothApp() {
                                                 >
                                                     <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-700"></td>
 
-                                                    <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700">
+                                                    <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700 relative">
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[15px] font-bold text-slate-500 dark:text-slate-400">
+                                                            +
+                                                        </div>
                                                         <div className="flex justify-center border-b-2 border-slate-400 pb-1">
                                                             {renderBits(step.operand, true)}
                                                         </div>
                                                     </td>
 
-                                                    <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700 text-center text-slate-400 dark:text-slate-500">
-                                                        —
+                                                    <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700 text-center text-slate-300 dark:text-slate-600 font-bold">
+                                                        ↓
                                                     </td>
 
-                                                    <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-700 text-center text-slate-400 dark:text-slate-500">
-                                                        —
+                                                    <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-700 text-center text-slate-300 dark:text-slate-600 font-bold">
+                                                        ↓
                                                     </td>
 
                                                     <td className="py-2 px-4 text-center font-semibold text-slate-700 dark:text-slate-300">
                                                         {step.opText}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        }
-
-                                        if (step.type === "arrow") {
-                                            return (
-                                                <tr
-                                                    key={step.id}
-                                                    className={`border-b border-slate-100 dark:border-slate-800 ${isActive ? "table-band-violet" : ""
-                                                        }`}
-                                                >
-                                                    <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-700"></td>
-                                                    <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700 text-center table-text-violet font-semibold">
-                                                        ARS by 2
-                                                    </td>
-                                                    <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700 text-center table-text-violet font-semibold">
-                                                        ↓↓
-                                                    </td>
-                                                    <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-700 text-center table-text-violet font-semibold">
-                                                        ↓
-                                                    </td>
-                                                    <td className="py-2 px-4 text-center table-text-violet font-semibold">
-                                                        shift
                                                     </td>
                                                 </tr>
                                             );
