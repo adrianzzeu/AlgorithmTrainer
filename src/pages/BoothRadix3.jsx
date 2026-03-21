@@ -309,6 +309,47 @@ export default function App() {
     [qC2, mC2, bitSize]
   );
 
+  const stepIndexById = useMemo(() => {
+    const lookup = {};
+    steps.forEach((step, index) => {
+      lookup[step.id] = index;
+    });
+    return lookup;
+  }, [steps]);
+
+  const tableBlocks = useMemo(() => {
+    const stepById = {};
+    steps.forEach((step) => {
+      stepById[step.id] = step;
+    });
+
+    const blocks = [];
+    let preState = stepById.init;
+    const lastDisplayedCount = Math.max(0, bitSize - 1);
+
+    for (let i = 0; i < bitSize && preState; i++) {
+      const opStep = stepById[`op_${i}`] ?? null;
+      const postState = stepById[`state_shift_${i}`];
+
+      blocks.push({
+        id: `block_${i}`,
+        blockId: i,
+        count: getCountStr(i, lastDisplayedCount),
+        preState,
+        opStep,
+        postState,
+        startIndex: stepIndexById[preState.id] ?? 0,
+        opIndex: opStep ? stepIndexById[opStep.id] : null,
+        endIndex: postState ? (stepIndexById[postState.id] ?? stepIndexById[preState.id]) : stepIndexById[preState.id],
+        isFinal: i === bitSize - 1,
+      });
+
+      preState = postState;
+    }
+
+    return blocks;
+  }, [steps, bitSize, stepIndexById]);
+
   const resetPractice = () => {
     setPracticePhase("action");
     setUserInputs({
@@ -416,11 +457,23 @@ export default function App() {
     </div>
   );
 
-  const ArrowHint = ({ from, to, color = "text-violet-600" }) => (
-    <div className={`text-[11px] leading-4 mt-1 font-mono ${color}`}>
-      {`${from} -> ${to}`}
+  const MainSlot = ({ children }) => (
+    <div className="min-h-[32px] w-full flex items-center justify-center">
+      {children}
     </div>
   );
+
+  const NoteSlot = ({ children }) => (
+    <div className="min-h-[18px] w-full flex items-center justify-center">
+      {children}
+    </div>
+  );
+
+  const getDisplayedOpText = (opType) => {
+    if (opType === "+M") return "A + M";
+    if (opType === "-M") return "A - M";
+    return "0";
+  };
 
 
 
@@ -481,8 +534,10 @@ export default function App() {
     return { x_i1, x_i, prevR, op, R_star };
   };
 
+  const currentStep = steps[currentStepIdx];
+
   const getCurrentEvalCtx = () => {
-    const step = steps[currentStepIdx];
+    const step = currentStep;
 
     if (step?.type === "state") return getEvalCtxFromState(step);
     if (step?.evalCtx) return step.evalCtx;
@@ -497,6 +552,13 @@ export default function App() {
   };
 
   const currentEvalCtx = getCurrentEvalCtx();
+
+  const activeBlockId =
+    currentStep?.type === "op"
+      ? currentStep.blockId
+      : tableBlocks.find((block) => block.preState.id === currentStep?.id)?.blockId ??
+        tableBlocks.find((block) => block.postState?.id === currentStep?.id)?.blockId ??
+        null;
 
   const handleActionGuess = (guessedAction) => {
     const nextStepObj = steps[currentStepIdx + 1];
@@ -565,35 +627,29 @@ export default function App() {
     [1, 1, 1, "0", 1],
   ];
 
-  const algorithmPseudo = `1. Choose bit width automatically.
-2. Convert operands to C2.
-3. Init:
-   A = 0...0
-   Q = multiplier
-   Q[bits] = sign(Q)
-   R = 0
-   M = multiplicand
-   -M = C2(-multiplicand)
+  const algorithmPseudo = `Regs: A[bits-1:0], M[bits-1:0], Q[bits:0], R, COUNT
 
-4. For i = 0 .. bits-1:
-   read (x_{i+1}, x_i, R)
-   (OP, R*) = truthTable(x_{i+1}, x_i, R)
+BEGIN:
+  A = 0, R = 0, COUNT = 0, M = INBUS
+  Q[bits-1:0] = INBUS, Q[bits] = Q[bits-1]
 
-   if OP = +1: A_sum = A + M
-   if OP = -1: A_sum = A + (-M)
-   if OP =  0: A_sum = A
+SCAN:
+  if Q[1:0]R = 001 or 010 then
+    A = A + M, R = R*
 
-   OVR = signedOverflow(A, operand, A_sum)
+  if Q[1:0]R = 101 or 110 then
+    A = A - M, R = R*
 
-   arithmetic right shift:
-   new A[MSB] = A_sum[MSB] XOR OVR
-   new A[bits-2:0] = A_sum[bits-1:1]
-   new Q[bits] = A_sum[LSB]
-   new Q = old Q[bits] · old Q[bits-1:1]
-   R = R*
+SHIFT:
+  A[bits-2:0], Q[bits:0] = A_sum[bits-1:0], Q[bits:1]
+  A[bits-1] = A_sum[bits-1] XOR OVR
 
-5. Final product:
-   P = A[bits-1:0] · Q[bits:1]`;
+  if COUNT = bits - 1 then goto OUTPUT
+  COUNT++, goto SCAN
+
+OUTPUT:
+  OUTBUS = A
+  OUTBUS = Q[bits:1]`;
 
   return (
     <div className="booth-page min-h-screen">
@@ -1049,183 +1105,318 @@ export default function App() {
                 </thead>
 
                 <tbody className="font-mono">
-                  {steps.slice(0, currentStepIdx + 1).map((step, idx) => {
-                    const isActive = idx === currentStepIdx;
-
-                    if (step.type === "state") {
-                      const meta = step.shiftMeta;
-                      const showShiftNotes = !step.isInit && !!meta;
-                      const showEvalPair = !step.isFinal;
+                  {tableBlocks
+                    .filter((block) => block.startIndex <= currentStepIdx)
+                    .map((block) => {
+                      const isActiveBlock = block.blockId === activeBlockId;
+                      const hasOp = !!block.opStep;
+                      const showOp =
+                        hasOp &&
+                        block.opIndex !== null &&
+                        currentStepIdx >= block.opIndex;
+                      const showShiftedState =
+                        !!block.postState &&
+                        currentStepIdx >= block.endIndex;
+                      const showPost = hasOp && showShiftedState;
+                      const visibleState =
+                        !hasOp && block.postState && showShiftedState
+                          ? block.postState
+                          : block.preState;
+                      const preEval = getEvalCtxFromState(block.preState);
+                      const postEval =
+                        block.postState && !block.isFinal
+                          ? getEvalCtxFromState(block.postState)
+                          : null;
+                      const visibleEval =
+                        !hasOp && !block.isFinal
+                          ? getEvalCtxFromState(visibleState)
+                          : null;
+                      const blockOvr =
+                        showOp || (showShiftedState && !hasOp)
+                          ? block.postState?.ovr ?? block.opStep?.ovr ?? "0"
+                          : "0";
+                      const opIsNegative = block.opStep?.opType === "-M";
+                      const showShiftLabel =
+                        !block.isFinal && (showOp || !block.opStep);
+                      const showRUpdate =
+                        showShiftedState && block.postState.R !== block.preState.R;
 
                       return (
                         <tr
-                          key={step.id}
-                          className={`
-                            border-b transition-colors
-                            ${step.isRedBox ? "table-band-rose border-2 border-red-400 dark:border-red-500/70" : ""}
-                            ${isActive && !step.isRedBox ? "table-band-amber" : ""}
-                            ${!step.isInit && !step.isRedBox ? "border-b-2 border-slate-300" : "border-slate-100 dark:border-slate-800"}
-                          `}
+                          key={block.id}
+                          className={[
+                            "border-b border-slate-100 dark:border-slate-800 transition-colors align-top",
+                            block.isFinal && showPost
+                              ? "table-band-rose"
+                              : currentStep?.type === "op" && isActiveBlock
+                                ? "table-band-sky"
+                                : isActiveBlock
+                                  ? "table-band-amber"
+                                  : "",
+                          ].join(" ")}
                         >
                           <td className="py-3 px-3 text-center text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 align-top font-mono text-[16px]">
-                            {step.count}
+                            {block.count}
                           </td>
 
                           <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="font-mono text-[18px] font-bold text-slate-900 dark:text-slate-100">{step.ovr}</div>
-                            {showShiftNotes && <TinyLine color="text-indigo-600">OVR={meta.ovr}</TinyLine>}
-                          </td>
-
-                          <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="flex flex-col items-center">
-                              <div className="flex justify-center">
-                                {renderBits(step.A, { highlightMsb: true })}
-                              </div>
-
-                              {showShiftNotes && (
-                                <>
-                                  <ArrowHint
-                                    from={`${meta.sumMsb} ⊕ ${meta.ovr}`}
-                                    to={meta.correctedMsb}
-                                    color="text-violet-600"
-                                  />
-                                  <TinyLine>A[MSB] = Sum[MSB] ⊕ OVR</TinyLine>
-                                </>
-                              )}
+                            <div className="font-mono text-[18px] font-bold text-slate-900 dark:text-slate-100">
+                              {blockOvr}
                             </div>
-                          </td>
-
-                          <td className="table-band-emerald py-3 px-2 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="font-mono text-[18px] font-bold table-text-emerald">{step.Q_extra}</div>
-                            {showShiftNotes && (
-                              <>
-                                <ArrowHint from={meta.aLsb} to={`Q[${bitSize}]`} color="text-green-600 dark:text-green-400" />
-                                <TinyLine>A₀ shifts here</TinyLine>
-                              </>
+                            {showOp && (
+                              <TinyLine color={opIsNegative ? "text-rose-600 dark:text-rose-300" : "text-sky-600 dark:text-sky-300"}>
+                                {getDisplayedOpText(block.opStep.opType)}
+                              </TinyLine>
                             )}
                           </td>
 
                           <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="flex flex-col items-center">
-                              <div className="flex justify-center">
-                                {renderBits(step.Q, {
+                            {hasOp ? (
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  {renderBits(block.preState.A, { highlightMsb: true })}
+                                </MainSlot>
+
+                                <MainSlot>
+                                  {showOp && (
+                                    <div className="flex items-center justify-center gap-2 border-b-2 border-slate-400 pb-1">
+                                      <span
+                                        className={[
+                                          "font-mono text-[14px]",
+                                          opIsNegative
+                                            ? "text-rose-600 dark:text-rose-300"
+                                            : "text-sky-600 dark:text-sky-300",
+                                        ].join(" ")}
+                                      >
+                                        {opIsNegative ? "-" : "+"}
+                                      </span>
+                                      {renderBits(block.opStep.A_operand, {
+                                        highlightMsb: true,
+                                        color: opIsNegative
+                                          ? "text-rose-700 dark:text-rose-200"
+                                          : "text-sky-700 dark:text-sky-200",
+                                      })}
+                                    </div>
+                                  )}
+                                </MainSlot>
+
+                                <MainSlot>
+                                  {showOp && (
+                                    <div className="flex justify-center">
+                                      {renderBits(block.opStep.A_sum, {
+                                        highlightMsb: true,
+                                        color: "table-text-sky font-semibold",
+                                      })}
+                                    </div>
+                                  )}
+                                </MainSlot>
+
+                                <MainSlot>
+                                  {showPost &&
+                                    renderBits(block.postState.A, {
+                                      highlightMsb: true,
+                                      color: block.isFinal
+                                        ? "text-emerald-700 dark:text-emerald-200 font-semibold"
+                                        : "text-slate-800 dark:text-slate-100",
+                                    })}
+                                </MainSlot>
+                              </div>
+                            ) : (
+                              <div className="flex justify-center pt-1">
+                                {renderBits(visibleState.A, {
                                   highlightMsb: true,
-                                  qGroup: true,
-                                  highlightIndices: showEvalPair
-                                    ? [step.Q.length - 2, step.Q.length - 1]
-                                    : [],
+                                  color: showShiftedState
+                                    ? "text-slate-800 dark:text-slate-100"
+                                    : "text-blue-700",
                                 })}
                               </div>
+                            )}
+                          </td>
 
-                              {showShiftNotes && (
-                                <>
-                                  <ArrowHint from={meta.oldQExtra} to="MSB" color="text-blue-600 dark:text-blue-400" />
-                                  <TinyLine>old Q[bits] enters Q</TinyLine>
-                                </>
-                              )}
-                            </div>
+                          <td className="table-band-emerald py-3 px-2 text-center border-r border-slate-200 dark:border-slate-700 align-top">
+                            {hasOp ? (
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  <div className="font-mono text-[18px] font-bold table-text-emerald">
+                                    {block.preState.Q_extra}
+                                  </div>
+                                </MainSlot>
+
+                                <MainSlot />
+                                <MainSlot />
+
+                                <MainSlot>
+                                  {showPost && (
+                                    <div className="font-mono text-[18px] font-bold table-text-emerald">
+                                      {block.postState.Q_extra}
+                                    </div>
+                                  )}
+                                </MainSlot>
+                              </div>
+                            ) : (
+                              <div className="font-mono text-[18px] font-bold table-text-emerald pt-1">
+                                {visibleState.Q_extra}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
+                            {hasOp ? (
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  {renderBits(block.preState.Q, {
+                                    highlightMsb: true,
+                                    qGroup: true,
+                                    highlightIndices: preEval
+                                      ? [block.preState.Q.length - 2, block.preState.Q.length - 1]
+                                      : [],
+                                  })}
+                                </MainSlot>
+
+                                <MainSlot />
+                                <MainSlot />
+
+                                <MainSlot>
+                                  {showPost &&
+                                    renderBits(block.postState.Q, {
+                                      highlightMsb: true,
+                                      qGroup: true,
+                                      highlightIndices: postEval
+                                        ? [block.postState.Q.length - 2, block.postState.Q.length - 1]
+                                        : [],
+                                      bitClassMap: {
+                                        0: "text-emerald-700 dark:text-emerald-200 font-semibold",
+                                      },
+                                      color: block.isFinal
+                                        ? "text-emerald-700 dark:text-emerald-200 font-semibold"
+                                        : "text-slate-800 dark:text-slate-100",
+                                    })}
+                                </MainSlot>
+
+                                <NoteSlot>
+                                  {showPost && (
+                                    <TinyLine color="text-emerald-700 dark:text-emerald-300">
+                                      old Q[{bitSize}] enters MSB
+                                    </TinyLine>
+                                  )}
+                                </NoteSlot>
+                              </div>
+                            ) : (
+                              <div className="flex justify-center pt-1">
+                                {renderBits(visibleState.Q, {
+                                  highlightMsb: true,
+                                  qGroup: true,
+                                  highlightIndices: visibleEval
+                                    ? [visibleState.Q.length - 2, visibleState.Q.length - 1]
+                                    : [],
+                                  color: showShiftedState
+                                    ? "text-slate-800 dark:text-slate-100"
+                                    : "text-blue-700",
+                                })}
+                              </div>
+                            )}
                           </td>
 
                           <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div
-                              className={[
-                                "font-mono text-[18px] font-bold text-red-600 dark:text-red-400",
-                                showEvalPair
-                                  ? "inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 dark:bg-violet-500/10"
-                                  : "",
-                              ].join(" ")}
-                            >
-                              {step.R}
-                            </div>
-                            {showShiftNotes && (
-                              <>
-                                <ArrowHint from={meta.prevR} to={meta.nextR} color="text-red-500" />
-                                <TinyLine>R becomes R*</TinyLine>
-                              </>
+                            {hasOp ? (
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  <div className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+                                    {block.preState.R}
+                                  </div>
+                                </MainSlot>
+
+                                <MainSlot />
+
+                                <MainSlot>
+                                  {showOp && (
+                                    <TinyLine color={block.opStep.R_after === block.preState.R ? "text-slate-500 dark:text-slate-400" : "text-violet-600 dark:text-violet-300"}>
+                                      {"R* = " + block.opStep.R_after}
+                                    </TinyLine>
+                                  )}
+                                </MainSlot>
+
+                                <MainSlot>
+                                  {showPost && (
+                                    <div
+                                      className={[
+                                        "inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
+                                        block.isFinal
+                                          ? "border-emerald-400/70 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                          : "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+                                      ].join(" ")}
+                                    >
+                                      {block.postState.R}
+                                    </div>
+                                  )}
+                                </MainSlot>
+                              </div>
+                            ) : (
+                              <div className="pt-1">
+                                <div
+                                  className={[
+                                    "inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
+                                    showShiftedState
+                                      ? "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200"
+                                      : "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+                                  ].join(" ")}
+                                >
+                                  {visibleState.R}
+                                </div>
+                              </div>
                             )}
                           </td>
 
                           <td className="py-3 px-4 text-center align-top">
-                            {step.isInit && renderBits(step.M, { highlightMsb: true, qGroup: true, color: "text-slate-800" })}
-                            {!step.isInit && meta && (
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono">
-                                op: {meta.opText}
-                              </div>
-                            )}
+                            <div className="flex flex-col items-center gap-1.5">
+                              {block.blockId === 0 && (
+                                <>
+                                  <TinyLine color="text-slate-600 dark:text-slate-300">
+                                    {"M = " + mC2}
+                                  </TinyLine>
+                                  <TinyLine color="text-slate-600 dark:text-slate-300">
+                                    {"-M = " + mNegC2}
+                                  </TinyLine>
+                                </>
+                              )}
+
+                              {showOp ? (
+                                <div
+                                  className={[
+                                    "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                                    opIsNegative ? "status-chip-negative" : "status-chip-positive",
+                                  ].join(" ")}
+                                >
+                                  {getDisplayedOpText(block.opStep.opType)}
+                                </div>
+                              ) : (
+                                <TinyLine color="text-slate-400 dark:text-slate-500">
+                                  0
+                                </TinyLine>
+                              )}
+
+                              {showShiftLabel && (
+                                <TinyLine color="text-violet-600 dark:text-violet-300">
+                                  RSHIFT
+                                </TinyLine>
+                              )}
+
+                              {showRUpdate && (
+                                <TinyLine color="text-red-500 dark:text-red-300">
+                                  {"R = " + block.postState.R}
+                                </TinyLine>
+                              )}
+
+                              {block.isFinal && showPost && (
+                                <TinyLine color="text-orange-600 dark:text-orange-300">
+                                  done
+                                </TinyLine>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
-                    }
-
-                    if (step.type === "op") {
-                      return (
-                        <tr
-                          key={step.id}
-                          className={`border-b border-slate-100 dark:border-slate-800 ${isActive ? "table-band-sky" : "table-band-slate"}`}
-                        >
-                          <td className="py-3 px-3 text-center text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 align-top font-mono text-[16px]">
-                            {step.count}
-                          </td>
-
-                          <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="font-mono text-[18px] font-bold text-slate-900 dark:text-slate-100">{step.ovr}</div>
-                            <TinyLine color="text-sky-600 dark:text-sky-400">{step.opType}</TinyLine>
-                          </td>
-
-                          <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="flex flex-col items-center">
-                              <div className="flex justify-center">
-                                {renderBits(step.A_before, { highlightMsb: true })}
-                              </div>
-
-                              <div className="mt-1 flex items-center justify-center gap-2 border-b-2 border-slate-400 pb-1">
-                                <span className="font-mono text-[14px] text-slate-500">+</span>
-                                {renderBits(step.A_operand, { highlightMsb: true })}
-                              </div>
-
-                              <div className="mt-2 flex justify-center">
-                                {renderBits(step.A_sum, {
-                                  highlightMsb: true,
-                                  color: "table-text-sky font-semibold",
-                                })}
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="table-band-emerald py-3 px-2 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="font-mono text-[18px] font-bold table-text-emerald">
-                              {step.Q_extra_before}
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="flex flex-col items-center">
-                              <div className="flex justify-center">
-                                {renderBits(step.Q_before, {
-                                  highlightMsb: true,
-                                  qGroup: true,
-                                  highlightIndices: [step.Q_before.length - 2, step.Q_before.length - 1],
-                                })}
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
-                              {step.R_before}
-                            </div>
-                            <TinyLine color="text-red-500 dark:text-red-300">{`R* = ${step.R_after}`}</TinyLine>
-                          </td>
-
-                          <td className="py-3 px-4 text-center text-slate-700 dark:text-slate-300 font-semibold align-top">
-                            {step.opType}
-                          </td>
-                        </tr>
-                      );
-                    }
-
-                    return null;
-                  })}
+                    })}
                 </tbody>
               </table>
             </div>
@@ -1310,14 +1501,14 @@ export default function App() {
                     onClick={() => handleActionGuess("add")}
                     className="choice-button-positive rounded-lg border-2 px-4 py-2 font-medium text-sm"
                   >
-                    +M
+                    A + M
                   </button>
 
                   <button
                     onClick={() => handleActionGuess("sub")}
                     className="choice-button-negative rounded-lg border-2 px-4 py-2 font-medium text-sm"
                   >
-                    -M
+                    A - M
                   </button>
 
                   <button
