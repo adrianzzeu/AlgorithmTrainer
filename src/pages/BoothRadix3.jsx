@@ -467,12 +467,30 @@ export default function App() {
 
   const finalProduct = getFinalProduct();
 
+  const getEvalCtxFromState = (step) => {
+    if (!step || step.type !== "state" || step.isFinal) return null;
+
+    const qLen = step.Q?.length ?? 0;
+    if (qLen === 0) return null;
+
+    const x_i = step.Q[qLen - 1];
+    const x_i1 = step.Q[Math.max(0, qLen - 2)];
+    const prevR = step.R;
+    const { op, R_star } = getBoothOperation(x_i1, x_i, prevR);
+
+    return { x_i1, x_i, prevR, op, R_star };
+  };
+
   const getCurrentEvalCtx = () => {
     const step = steps[currentStepIdx];
 
+    if (step?.type === "state") return getEvalCtxFromState(step);
     if (step?.evalCtx) return step.evalCtx;
-    if (currentStepIdx + 1 < steps.length && steps[currentStepIdx + 1]?.evalCtx) {
-      return steps[currentStepIdx + 1].evalCtx;
+
+    if (currentStepIdx + 1 < steps.length) {
+      const nextStep = steps[currentStepIdx + 1];
+      if (nextStep?.type === "state") return getEvalCtxFromState(nextStep);
+      if (nextStep?.evalCtx) return nextStep.evalCtx;
     }
 
     return null;
@@ -1037,6 +1055,7 @@ export default function App() {
                     if (step.type === "state") {
                       const meta = step.shiftMeta;
                       const showShiftNotes = !step.isInit && !!meta;
+                      const showEvalPair = !step.isFinal;
 
                       return (
                         <tr
@@ -1089,7 +1108,13 @@ export default function App() {
                           <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
                             <div className="flex flex-col items-center">
                               <div className="flex justify-center">
-                                {renderBits(step.Q, { highlightMsb: true, qGroup: true })}
+                                {renderBits(step.Q, {
+                                  highlightMsb: true,
+                                  qGroup: true,
+                                  highlightIndices: showEvalPair
+                                    ? [step.Q.length - 2, step.Q.length - 1]
+                                    : [],
+                                })}
                               </div>
 
                               {showShiftNotes && (
@@ -1102,7 +1127,16 @@ export default function App() {
                           </td>
 
                           <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="font-mono text-[18px] font-bold text-red-600 dark:text-red-400">{step.R}</div>
+                            <div
+                              className={[
+                                "font-mono text-[18px] font-bold text-red-600 dark:text-red-400",
+                                showEvalPair
+                                  ? "inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 dark:bg-violet-500/10"
+                                  : "",
+                              ].join(" ")}
+                            >
+                              {step.R}
+                            </div>
                             {showShiftNotes && (
                               <>
                                 <ArrowHint from={meta.prevR} to={meta.nextR} color="text-red-500" />
@@ -1140,16 +1174,20 @@ export default function App() {
 
                           <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
                             <div className="flex flex-col items-center">
-                              <div className="flex justify-center border-b-2 border-slate-400 pb-1">
+                              <div className="flex justify-center">
+                                {renderBits(step.A_before, { highlightMsb: true })}
+                              </div>
+
+                              <div className="mt-1 flex items-center justify-center gap-2 border-b-2 border-slate-400 pb-1">
+                                <span className="font-mono text-[14px] text-slate-500">+</span>
                                 {renderBits(step.A_operand, { highlightMsb: true })}
                               </div>
 
-                              <div className="mt-2 font-mono text-[13px] text-slate-500">
-                                {step.A_before} + operand
-                              </div>
-
-                              <div className="font-mono text-[15px] table-text-sky font-semibold">
-                                = {step.A_sum}
+                              <div className="mt-2 flex justify-center">
+                                {renderBits(step.A_sum, {
+                                  highlightMsb: true,
+                                  color: "table-text-sky font-semibold",
+                                })}
                               </div>
                             </div>
                           </td>
@@ -1166,15 +1204,9 @@ export default function App() {
                                 {renderBits(step.Q_before, {
                                   highlightMsb: true,
                                   qGroup: true,
-                                  bitClassMap: {
-                                    [step.Q_before.length - 2]:
-                                      "rounded-full border border-cyan-400/70 bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200",
-                                    [step.Q_before.length - 1]:
-                                      "rounded-full border border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
-                                  },
+                                  highlightIndices: [step.Q_before.length - 2, step.Q_before.length - 1],
                                 })}
                               </div>
-                              <TinyLine color="text-cyan-600 dark:text-cyan-300">{`x_i+1=${step.evalCtx.x_i1}, x_i=${step.evalCtx.x_i}`}</TinyLine>
                             </div>
                           </td>
 
@@ -1198,7 +1230,7 @@ export default function App() {
               </table>
             </div>
 
-            {currentEvalCtx && currentStepIdx > 0 && (
+            {currentEvalCtx && (
               <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-sm flex items-center gap-4 flex-wrap">
                 <span className="font-semibold text-slate-700">Evaluating:</span>
 
