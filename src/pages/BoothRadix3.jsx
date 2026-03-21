@@ -87,9 +87,6 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
     let A_sum = A;
     let ovr = "0";
 
-    const currentStepCount = getCountStr(i, lastDisplayedCount);
-    const displayCount = (i === 0) ? "" : currentStepCount;
-
     if (op !== 0) {
       const operand = op === 1 ? M : M_neg;
       const addRes = addBinaryStr(A, operand);
@@ -101,12 +98,16 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
         id: `op_${i}`,
         type: "op",
         blockId: i,
-        count: displayCount,
+        count: "",
         ovr,
         A_before: A,
         A_operand: operand,
         A_sum,
         opType: op === 1 ? "+M" : "-M",
+        Q_extra_before: Q_extra,
+        Q_before: Q,
+        R_before: prevR,
+        R_after: R_star,
         evalCtx: { x_i1, x_i, prevR, op, R_star },
       });
     }
@@ -130,7 +131,7 @@ const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
       id: `state_shift_${i}`,
       type: "state",
       blockId: i,
-      count: (op !== 0) ? "" : displayCount,
+      count: isFinal ? "" : getCountStr(i + 1, lastDisplayedCount),
       ovr,
       A,
       Q_extra,
@@ -372,6 +373,8 @@ export default function App() {
       highlightMsb = false,
       qGroup = false,
       emphasizeLast = false,
+      highlightIndices = [],
+      bitClassMap = {},
       color = "text-blue-700",
     } = {}
   ) => {
@@ -393,6 +396,10 @@ export default function App() {
                 addGap ? "ml-2" : "",
                 i === 0 && highlightMsb ? "text-blue-600 dark:text-blue-400 font-bold" : "",
                 emphasizeLast && i === bitStr.length - 1 ? "underline underline-offset-2" : "",
+                highlightIndices.includes(i)
+                  ? "rounded-full border border-cyan-400/70 bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200"
+                  : "",
+                bitClassMap[i] ?? "",
               ].join(" ")}
             >
               {b}
@@ -1127,8 +1134,8 @@ export default function App() {
                           </td>
 
                           <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
-                            <div className="text-[13px] font-bold text-blue-600 dark:text-blue-400">op</div>
-                            <TinyLine color="text-indigo-600">OVR={step.ovr}</TinyLine>
+                            <div className="font-mono text-[18px] font-bold text-slate-900 dark:text-slate-100">{step.ovr}</div>
+                            <TinyLine color="text-sky-600 dark:text-sky-400">{step.opType}</TinyLine>
                           </td>
 
                           <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
@@ -1147,9 +1154,36 @@ export default function App() {
                             </div>
                           </td>
 
-                          <td className="table-band-emerald py-3 px-2 border-r border-slate-200 dark:border-slate-700"></td>
-                          <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700"></td>
-                          <td className="py-3 px-3 border-r border-slate-200 dark:border-slate-700"></td>
+                          <td className="table-band-emerald py-3 px-2 text-center border-r border-slate-200 dark:border-slate-700 align-top">
+                            <div className="font-mono text-[18px] font-bold table-text-emerald">
+                              {step.Q_extra_before}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
+                            <div className="flex flex-col items-center">
+                              <div className="flex justify-center">
+                                {renderBits(step.Q_before, {
+                                  highlightMsb: true,
+                                  qGroup: true,
+                                  bitClassMap: {
+                                    [step.Q_before.length - 2]:
+                                      "rounded-full border border-cyan-400/70 bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200",
+                                    [step.Q_before.length - 1]:
+                                      "rounded-full border border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+                                  },
+                                })}
+                              </div>
+                              <TinyLine color="text-cyan-600 dark:text-cyan-300">{`x_i+1=${step.evalCtx.x_i1}, x_i=${step.evalCtx.x_i}`}</TinyLine>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
+                            <div className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+                              {step.R_before}
+                            </div>
+                            <TinyLine color="text-red-500 dark:text-red-300">{`R* = ${step.R_after}`}</TinyLine>
+                          </td>
 
                           <td className="py-3 px-4 text-center text-slate-700 dark:text-slate-300 font-semibold align-top">
                             {step.opType}
