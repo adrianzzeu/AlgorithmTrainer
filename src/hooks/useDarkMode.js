@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 function getInitialTheme() {
   if (typeof window === 'undefined') {
-    return 'light';
+    return 'dark';
   }
 
   const storedTheme = window.localStorage.getItem('theme');
@@ -10,7 +10,7 @@ function getInitialTheme() {
     return storedTheme;
   }
 
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'dark';
 }
 
 export default function useDarkMode() {

@@ -3,7 +3,7 @@ import React from 'react';
 export default function Step({ n, title, children }) {
     return (
         <div className="flex gap-3">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white shadow-md dark:bg-slate-100 dark:text-slate-900">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                 {n}
             </div>
             <div>

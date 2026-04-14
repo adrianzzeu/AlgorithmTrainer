@@ -36,7 +36,7 @@ function classNames(...parts) {
 
 function TheoryPill({ children }) {
     return (
-        <span className="inline-flex rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+        <span className="inline-flex rounded-full border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-950/50 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
             {children}
         </span>
     );
@@ -44,7 +44,7 @@ function TheoryPill({ children }) {
 
 function WorkedExampleRow({ step, title, children }) {
     return (
-        <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:bg-slate-900 transition px-2 rounded-lg">
+        <div className="flex flex-col gap-2 rounded-lg px-2 py-3 transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 sm:flex-row sm:items-baseline border-b border-slate-100 last:border-0">
             <div className="sm:w-32 shrink-0">
                 <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     {step}
@@ -64,16 +64,16 @@ function WorkedExampleRow({ step, title, children }) {
 
 function FormulaBox({ title, formulas }) {
     return (
-        <div className="rounded-2xl border-2 border-indigo-100 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/40 p-4 relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/50">
             <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Sigma className="w-16 h-16" />
             </div>
-            <div className="text-indigo-900 dark:text-indigo-300 font-bold mb-3">{title}</div>
+            <div className="mb-3 font-bold text-slate-900 dark:text-slate-100">{title}</div>
             <div className="space-y-2 relative z-10">
                 {formulas.map((f, i) => (
                     <div key={i} className="flex gap-3 items-center">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-                        <div className="text-sm font-mono text-indigo-900 dark:text-indigo-300">{f}</div>
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                        <div className="text-sm font-mono text-slate-800 dark:text-slate-200">{f}</div>
                     </div>
                 ))}
             </div>
@@ -240,49 +240,49 @@ export default function SmC2FixedPointLab() {
                                 <TheoryPill>Two's Complement</TheoryPill>
                                 <TheoryPill>Fixed-Point Fractions</TheoryPill>
                             </div>
-                            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 md:text-4xl">
-                                SM / C2 / Fixed-Point Lab
-                            </h1>
-                            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 dark:text-slate-400">
-                                A study page made to help you understand what has to happen before Booth-style multiplication: how to choose the bit width, how to convert from sign-magnitude to two's complement, and how fractional values are represented with fixed-point scaling.
-                            </p>
-                            <div className="mt-5 flex flex-wrap gap-3">
-                                <button
-                                    onClick={() => setMode("integer")}
-                                    className={classNames(
-                                        "rounded-2xl px-4 py-2 text-sm font-semibold transition",
-                                        mode === "integer"
-                                            ? "bg-slate-900 text-white"
-                                            : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-800"
-                                    )}
-                                >
-                                    Integer focus
-                                </button>
-                                <button
-                                    onClick={() => setMode("fractional")}
-                                    className={classNames(
-                                        "rounded-2xl px-4 py-2 text-sm font-semibold transition",
-                                        mode === "fractional"
-                                            ? "bg-slate-900 text-white"
-                                            : "border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-800"
-                                    )}
-                                >
-                                    Fractional focus
-                                </button>
-                            </div>
+                                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 md:text-4xl">
+                                    Representation Lab
+                                </h1>
+                                <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 dark:text-slate-400">
+                                    Width selection, SM to C2 conversion, and fixed-point setup before the Booth tables.
+                                </p>
+                                <div className="mt-5 flex flex-wrap gap-3">
+                                    <button
+                                        onClick={() => setMode("integer")}
+                                        className={classNames(
+                                            "rounded-2xl px-4 py-2 text-sm font-semibold transition",
+                                            mode === "integer"
+                                                ? "border border-slate-200 bg-slate-900 text-white dark:border-slate-700 dark:bg-slate-100 dark:text-slate-900"
+                                                : "border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                                        )}
+                                    >
+                                        Integer
+                                    </button>
+                                    <button
+                                        onClick={() => setMode("fractional")}
+                                        className={classNames(
+                                            "rounded-2xl px-4 py-2 text-sm font-semibold transition",
+                                            mode === "fractional"
+                                                ? "border border-slate-200 bg-slate-900 text-white dark:border-slate-700 dark:bg-slate-100 dark:text-slate-900"
+                                                : "border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-950/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                                        )}
+                                    >
+                                        Fractional
+                                    </button>
+                                </div>
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                            <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4">
-                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Fast rule</div>
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                            <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
+                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Positive values</div>
                                 <div className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                    Positive numbers look the same in <span className="font-semibold">SM</span> and <span className="font-semibold">C2</span> except that SM splits sign + magnitude explicitly.
+                                    SM and C2 read similarly for positive numbers. SM just stores sign and magnitude separately.
                                 </div>
                             </div>
-                            <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4">
-                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Negative rule</div>
+                            <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
+                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Negative values</div>
                                 <div className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                                    For C2: write <span className="font-semibold">|x|</span> on the full width, invert every bit, then add <span className="font-semibold">1</span>.
+                                    For C2: write <span className="font-semibold">|x|</span> on the full width, invert, then add <span className="font-semibold">1</span>.
                                 </div>
                             </div>
                         </div>
@@ -360,7 +360,7 @@ export default function SmC2FixedPointLab() {
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="rounded-3xl border-2 border-slate-800 bg-slate-900 p-6 text-white shadow-lg">
                                     <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                        <span className="text-blue-400">SM</span> Most Significant Bit
+                                        <span className="text-slate-300">SM</span> Most Significant Bit
                                     </h3>
                                     <div className="text-slate-300 text-sm leading-relaxed">
                                         <p className="mb-2">The leftmost bit is a <strong>sign flag ONLY</strong>.</p>

@@ -18,9 +18,16 @@ const PAIR_RULES = [
 ];
 
 const inputClass =
-  'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none ' +
-  'focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-slate-700 ' +
-  'dark:bg-slate-900 dark:text-slate-100';
+  'w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm outline-none transition ' +
+  'focus:border-slate-400 focus:ring-0 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-100';
+
+const iconButtonClass =
+  'rounded-xl border border-slate-200 bg-white/80 p-2 text-slate-700 transition hover:bg-slate-100 ' +
+  'disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:bg-slate-900';
+
+const primaryButtonClass =
+  'rounded-xl border border-slate-900 bg-slate-900 px-5 py-2 font-semibold text-white transition hover:bg-slate-800 ' +
+  'disabled:opacity-40 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
 
 const createEmptyPracticeInputs = () => ({ A: '', Q: '', Q1: '' });
 
@@ -57,10 +64,10 @@ const renderQWithBracket = (Q, Q1, highlightPair) => {
           {bit}
         </span>
       ))}
-      <div className={`flex items-center ${highlightPair ? 'border-b-2 border-green-500 dark:border-green-400' : ''}`}>
+      <div className={`flex items-center ${highlightPair ? 'border-b-2 border-slate-500 dark:border-slate-300' : ''}`}>
         <span className="inline-block w-4 text-center">{lsb}</span>
         <span className="inline-block w-2 text-center text-transparent">_</span>
-        <span className="inline-block w-4 text-center font-bold text-red-600 dark:text-red-400">{Q1}</span>
+        <span className="inline-block w-4 text-center font-semibold text-slate-500 dark:text-slate-300">{Q1}</span>
       </div>
     </div>
   );
@@ -252,15 +259,15 @@ export default function BoothDefault() {
     <div className="booth-page min-h-screen">
       <div className="workbench-shell flex flex-col xl:flex-row">
         <div className="workbench-sidebar w-full xl:w-96 p-5 shadow-lg xl:min-h-[calc(100vh-7rem)]">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-              <GraduationCap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-2xl border border-slate-200 bg-white/70 p-2.5 dark:border-slate-700 dark:bg-slate-950/50">
+                <GraduationCap className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200">Booth Default</h1>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Standard table flow</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200">Booth Default</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Standard Booth multiplication walkthrough</p>
-            </div>
-          </div>
 
           <div className="mb-5 space-y-3">
             <div>
@@ -318,33 +325,33 @@ export default function BoothDefault() {
             </div>
           </div>
 
-          <div className="mt-auto space-y-4">
-            <div className="flex items-center justify-between rounded-[1.2rem] border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/70">
+            <div className="mt-auto space-y-4">
+            <div className="flex items-center justify-between rounded-[1.2rem] border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-950/50">
               <div>
                 <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Practice Mode</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Answer the next action and register state.</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Answer the next action and state.</div>
               </div>
               <button
                 onClick={() => { setIsPracticeMode((prev) => !prev); resetPractice(); }}
-                className={`relative h-7 w-14 rounded-full transition-colors ${isPracticeMode ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                className={`relative h-7 w-14 rounded-full border transition-colors ${isPracticeMode ? 'border-slate-100 bg-slate-100 dark:border-slate-100 dark:bg-slate-100' : 'border-slate-300 bg-slate-300 dark:border-slate-700 dark:bg-slate-800'}`}
                 aria-label="Toggle practice mode"
               >
-                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${isPracticeMode ? 'translate-x-8' : 'translate-x-1'}`} />
+                <span className={`absolute top-1 h-5 w-5 rounded-full bg-slate-900 transition-transform dark:bg-slate-900 ${isPracticeMode ? 'translate-x-8' : 'translate-x-1'}`} />
               </button>
             </div>
 
             {!isPracticeMode && (
               <div className="grid grid-cols-4 gap-2">
-                <button onClick={() => { setCurrentStepIdx(0); resetPractice(); }} className="rounded-lg bg-slate-200 p-2 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600" title="Reset">
+                <button onClick={() => { setCurrentStepIdx(0); resetPractice(); }} className={iconButtonClass} title="Reset">
                   <RotateCcw className="mx-auto h-4 w-4" />
                 </button>
-                <button onClick={() => { if (currentStepIdx > 0) { setCurrentStepIdx((prev) => prev - 1); resetPractice(); } }} disabled={currentStepIdx === 0} className="rounded-lg bg-slate-200 p-2 text-slate-700 hover:bg-slate-300 disabled:opacity-40 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600" title="Previous">
+                <button onClick={() => { if (currentStepIdx > 0) { setCurrentStepIdx((prev) => prev - 1); resetPractice(); } }} disabled={currentStepIdx === 0} className={iconButtonClass} title="Previous">
                   <ChevronRight className="mx-auto h-4 w-4 rotate-180" />
                 </button>
-                <button onClick={() => { if (currentStepIdx < steps.length - 1) { setCurrentStepIdx((prev) => prev + 1); resetPractice(); } }} disabled={currentStepIdx === steps.length - 1} className="rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700 disabled:opacity-40" title="Next">
+                <button onClick={() => { if (currentStepIdx < steps.length - 1) { setCurrentStepIdx((prev) => prev + 1); resetPractice(); } }} disabled={currentStepIdx === steps.length - 1} className={primaryButtonClass} title="Next">
                   <ChevronRight className="mx-auto h-4 w-4" />
                 </button>
-                <button onClick={() => { setCurrentStepIdx(steps.length - 1); resetPractice(); }} disabled={currentStepIdx === steps.length - 1} className="rounded-lg bg-green-500 p-2 text-white hover:bg-green-600 disabled:opacity-40" title="Run all">
+                <button onClick={() => { setCurrentStepIdx(steps.length - 1); resetPractice(); }} disabled={currentStepIdx === steps.length - 1} className={primaryButtonClass} title="Run all">
                   <Play className="mx-auto h-4 w-4" />
                 </button>
               </div>
@@ -459,10 +466,10 @@ export default function BoothDefault() {
 
             {currentStepIdx === steps.length - 1 && (
               <div className="surface-card mt-4 rounded-[1.5rem] p-6 text-center">
-                <h3 className="text-xl font-bold text-green-800 dark:text-green-300">Multiplication Complete</h3>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Multiplication Complete</h3>
                 <p className="mt-3 text-slate-700 dark:text-slate-300">
                   Final result:
-                  <span className="ml-2 rounded border border-green-200 bg-green-50 px-2 py-1 font-mono dark:border-green-500/30 dark:bg-green-500/10">
+                  <span className="ml-2 rounded border border-slate-200 bg-white px-2 py-1 font-mono dark:border-slate-700 dark:bg-slate-950/50">
                     {finalStep.A} {finalStep.Q}
                   </span>
                 </p>
@@ -476,10 +483,10 @@ export default function BoothDefault() {
       </div>
 
       {isPracticeMode && currentStepIdx < steps.length - 1 && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-950/92">
           <div className="mx-auto max-w-5xl">
             <div className="mb-3 flex items-center gap-3">
-              <StepForward className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <StepForward className="h-5 w-5 text-slate-700 dark:text-slate-200" />
               <h3 className="font-bold text-slate-800 dark:text-slate-100">Your Turn</h3>
             </div>
 
@@ -496,7 +503,7 @@ export default function BoothDefault() {
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => handleActionGuess('add')} className="choice-button-positive rounded-lg border-2 px-4 py-2 text-sm font-medium">A = A + M</button>
                   <button onClick={() => handleActionGuess('sub')} className="choice-button-negative rounded-lg border-2 px-4 py-2 text-sm font-medium">A = A - M</button>
-                  <button onClick={() => handleActionGuess('shift')} className="rounded-lg border-2 border-slate-400 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300">Shift Only</button>
+                  <button onClick={() => handleActionGuess('shift')} className="rounded-lg border-2 border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-950">Shift Only</button>
                 </div>
               </div>
             ) : (
@@ -515,7 +522,7 @@ export default function BoothDefault() {
                     <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">New Q[-1]</label>
                     <input type="text" maxLength={1} value={userInputs.Q1} onChange={(event) => setUserInputs((prev) => ({ ...prev, Q1: event.target.value.replace(/[^01]/g, '') }))} className="w-14 rounded-lg border border-slate-300 px-3 py-2 text-center font-mono dark:border-slate-600 dark:bg-slate-900" placeholder="0" />
                   </div>
-                  <button onClick={handleValueSubmit} className="rounded-lg bg-green-600 px-5 py-2 font-semibold text-white hover:bg-green-700">Check Answer</button>
+                  <button onClick={handleValueSubmit} className={primaryButtonClass}>Check Answer</button>
                 </div>
               </div>
             )}

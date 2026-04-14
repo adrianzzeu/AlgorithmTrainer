@@ -24,6 +24,18 @@ import {
     getSmToC2Explanation,
 } from '../utils/binaryHelpers';
 
+const inputClass =
+    'w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-sm outline-none transition ' +
+    'focus:border-slate-400 focus:ring-0 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-100';
+
+const iconButtonClass =
+    'rounded-xl border border-slate-200 bg-white/80 p-2 text-slate-700 transition hover:bg-slate-100 ' +
+    'disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:bg-slate-900';
+
+const primaryButtonClass =
+    'rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 ' +
+    'disabled:opacity-40 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
+
 const chooseEvenRadix4Bits = (qVal, mVal) => {
     const qNeed = Math.max(
         requiredBitsForSignedInt(qVal),
@@ -92,6 +104,7 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
     steps.push({
         id: "init",
         type: "state",
+        blockId: 0,
         count: getCountStr(0, lastDisplayedCount),
         A,
         Q,
@@ -128,6 +141,7 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
             steps.push({
                 id: `op_${i}`,
                 type: "op",
+                blockId: i,
                 operand,
                 opText: opInfo.text,
                 evalCtx,
@@ -138,6 +152,7 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
             steps.push({
                 id: `math_${i}`,
                 type: "state",
+                blockId: i,
                 count: "",
                 A,
                 Q,
@@ -161,6 +176,7 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
         steps.push({
             id: `shift_${i}`,
             type: "state",
+            blockId: i,
             count: isFinal ? "" : getCountStr(i + 1, lastDisplayedCount),
             A,
             Q,
@@ -402,7 +418,7 @@ export default function Radix4BoothApp() {
                     return (
                         <span
                             key={`${bitStr}-${i}`}
-                            className={`inline-block w-4 text-center ${i === 0 && highlightMsb ? "text-blue-600 dark:text-blue-400 font-bold" : ""
+                            className={`inline-block w-4 text-center ${i === 0 && highlightMsb ? "text-slate-700 dark:text-slate-200 font-bold" : ""
                                 } ${underlineLastTwo && isLastTwo ? "border-b-2 border-red-400 font-semibold" : ""
                                 }`}
                         >
@@ -569,25 +585,25 @@ export default function Radix4BoothApp() {
             <div className="workbench-shell flex flex-col xl:flex-row">
                 {/* Sidebar */}
                 <div className="workbench-sidebar w-full xl:w-[26rem] p-5 shadow-lg xl:min-h-[calc(100vh-7rem)]">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                            <GraduationCap className="text-blue-600 dark:text-blue-400 w-6 h-6" />
+                    <div className="mb-6 flex items-center gap-3">
+                        <div className="rounded-2xl border border-slate-200 bg-white/70 p-2.5 dark:border-slate-700 dark:bg-slate-950/50">
+                            <GraduationCap className="h-5 w-5 text-slate-700 dark:text-slate-200" />
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200">Radix-4 Booth</h1>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Auto width + practice + conversions
+                            <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                                Auto width and practice
                             </p>
                         </div>
                     </div>
 
                     {/* Mode toggle */}
-                    <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1 mb-5">
+                    <div className="mb-5 flex rounded-2xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-950/50">
                         <button
                             onClick={() => handleModeChange("integer")}
                             className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${mode === "integer"
-                                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                                    : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:text-slate-200"
+                                    ? "bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+                                    : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                                 }`}
                         >
                             Integer
@@ -596,8 +612,8 @@ export default function Radix4BoothApp() {
                         <button
                             onClick={() => handleModeChange("fractional")}
                             className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all ${mode === "fractional"
-                                    ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                                    : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:text-slate-200"
+                                    ? "bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+                                    : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                                 }`}
                         >
                             Fractional
@@ -616,7 +632,7 @@ export default function Radix4BoothApp() {
                                         type="number"
                                         value={xInt}
                                         onChange={handleSignedInput(setXInt)}
-                                        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        className={inputClass}
                                     />
                                 </div>
 
@@ -628,7 +644,7 @@ export default function Radix4BoothApp() {
                                         type="number"
                                         value={yInt}
                                         onChange={handleSignedInput(setYInt)}
-                                        className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        className={inputClass}
                                     />
                                 </div>
                             </div>
@@ -638,7 +654,7 @@ export default function Radix4BoothApp() {
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         Register Width
                                     </label>
-                                    <div className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                         {bitSize} bits (auto, even)
                                     </div>
                                 </div>
@@ -647,7 +663,7 @@ export default function Radix4BoothApp() {
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         A / M Variant Width
                                     </label>
-                                    <div className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                         {extBits} bits
                                     </div>
                                 </div>
@@ -664,7 +680,7 @@ export default function Radix4BoothApp() {
                                         type="number"
                                         value={qNum}
                                         onChange={handleSignedInput(setQNum)}
-                                        className="w-full px-2 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className={inputClass}
                                     />
                                 </div>
                                 <span className="text-slate-400 text-center pb-2">/</span>
@@ -677,7 +693,7 @@ export default function Radix4BoothApp() {
                                         min={1}
                                         value={qDen}
                                         onChange={handlePositiveInput(setQDen)}
-                                        className="w-full px-2 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className={inputClass}
                                     />
                                 </div>
                             </div>
@@ -691,7 +707,7 @@ export default function Radix4BoothApp() {
                                         type="number"
                                         value={mNum}
                                         onChange={handleSignedInput(setMNum)}
-                                        className="w-full px-2 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className={inputClass}
                                     />
                                 </div>
                                 <span className="text-slate-400 text-center pb-2">/</span>
@@ -704,7 +720,7 @@ export default function Radix4BoothApp() {
                                         min={1}
                                         value={mDen}
                                         onChange={handlePositiveInput(setMDen)}
-                                        className="w-full px-2 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className={inputClass}
                                     />
                                 </div>
                             </div>
@@ -714,7 +730,7 @@ export default function Radix4BoothApp() {
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         Fractional Bits
                                     </label>
-                                    <div className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                         {fracBits} bits
                                     </div>
                                 </div>
@@ -723,7 +739,7 @@ export default function Radix4BoothApp() {
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         Register Width
                                     </label>
-                                    <div className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                         {bitSize} bits (auto, even)
                                     </div>
                                 </div>
@@ -732,7 +748,7 @@ export default function Radix4BoothApp() {
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         A / M Variant Width
                                     </label>
-                                    <div className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                         {extBits} bits
                                     </div>
                                 </div>
@@ -754,7 +770,7 @@ export default function Radix4BoothApp() {
 
                             <div className="font-mono text-slate-600 dark:text-slate-400 flex justify-between">
                                 <span>C2:</span>
-                                <span className="text-blue-600 dark:text-blue-400 font-semibold">{qC2}</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-100">{qC2}</span>
                             </div>
                         </div>
 
@@ -770,7 +786,7 @@ export default function Radix4BoothApp() {
 
                             <div className="font-mono text-slate-600 dark:text-slate-400 flex justify-between">
                                 <span>C2:</span>
-                                <span className="text-blue-600 dark:text-blue-400 font-semibold">{mC2}</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-100">{mC2}</span>
                             </div>
                         </div>
 
@@ -802,7 +818,7 @@ export default function Radix4BoothApp() {
 
                         {finalProduct && currentStepIdx === steps.length - 1 && (
                             <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                                <div className="font-semibold text-green-700 text-sm">
+                                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                                     {mode === "fractional"
                                         ? `Product = ${finalProduct.fractionText} ≈ ${finalProduct.decimal.toFixed(
                                             6
@@ -870,7 +886,7 @@ export default function Radix4BoothApp() {
                     <div className="mb-5">
                         <button
                             onClick={() => setShowTruthTable(!showTruthTable)}
-                            className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 hover:text-blue-600 dark:text-blue-400"
+                            className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
                         >
                             <ChevronDown
                                 className={`w-4 h-4 transition-transform ${showTruthTable ? "" : "-rotate-90"
@@ -909,7 +925,7 @@ export default function Radix4BoothApp() {
                                                     <td className="py-1">{row[0][2]}</td>
                                                     <td
                                                         className={`py-1 ${row[1] === "+M" || row[1] === "+2M"
-                                                                ? "text-green-600"
+                                                                ? "text-slate-900 dark:text-slate-100"
                                                                 : row[1] === "-M" || row[1] === "-2M"
                                                                     ? "text-red-600"
                                                                     : ""
@@ -928,15 +944,15 @@ export default function Radix4BoothApp() {
 
                     {/* Controls */}
                     <div className="space-y-3 mt-auto">
-                        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/50">
                             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Practice Mode</span>
                             <button
                                 onClick={() => setIsPracticeMode(!isPracticeMode)}
-                                className={`w-11 h-6 rounded-full transition-colors relative ${isPracticeMode ? "bg-green-500" : "bg-slate-300"
+                                className={`relative h-6 w-11 rounded-full border transition-colors ${isPracticeMode ? "border-slate-100 bg-slate-100 dark:border-slate-100 dark:bg-slate-100" : "border-slate-300 bg-slate-300 dark:border-slate-700 dark:bg-slate-800"
                                     }`}
                             >
                                 <div
-                                    className={`w-4 h-4 bg-white dark:bg-slate-800 rounded-full absolute top-1 transition-transform shadow-sm ${isPracticeMode ? "translate-x-6" : "translate-x-1"
+                                    className={`absolute top-1 h-4 w-4 rounded-full bg-slate-900 transition-transform shadow-sm dark:bg-slate-900 ${isPracticeMode ? "translate-x-6" : "translate-x-1"
                                         }`}
                                 />
                             </button>
@@ -946,7 +962,7 @@ export default function Radix4BoothApp() {
                             <div className="grid grid-cols-4 gap-2">
                                 <button
                                     onClick={jumpToStart}
-                                    className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg text-slate-600 dark:text-slate-400 transition-colors"
+                                    className={iconButtonClass}
                                     title="Reset"
                                 >
                                     <RotateCcw className="w-4 h-4 mx-auto" />
@@ -955,7 +971,7 @@ export default function Radix4BoothApp() {
                                 <button
                                     onClick={prevStep}
                                     disabled={currentStepIdx === 0}
-                                    className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg text-slate-600 dark:text-slate-400 disabled:opacity-40 transition-colors"
+                                    className={iconButtonClass}
                                     title="Previous"
                                 >
                                     <ChevronRight className="w-4 h-4 mx-auto rotate-180" />
@@ -964,7 +980,7 @@ export default function Radix4BoothApp() {
                                 <button
                                     onClick={nextStep}
                                     disabled={currentStepIdx === steps.length - 1}
-                                    className="p-2 bg-blue-500 hover:bg-blue-600 dark:bg-blue-500 rounded-lg text-white disabled:opacity-40 transition-colors"
+                                    className={primaryButtonClass}
                                     title="Next"
                                 >
                                     <ChevronRight className="w-4 h-4 mx-auto" />
@@ -973,7 +989,7 @@ export default function Radix4BoothApp() {
                                 <button
                                     onClick={runAll}
                                     disabled={currentStepIdx === steps.length - 1}
-                                    className="p-2 bg-green-500 hover:bg-green-600 rounded-lg text-white disabled:opacity-40 transition-colors"
+                                    className={primaryButtonClass}
                                     title="Run All"
                                 >
                                     <Play className="w-4 h-4 mx-auto" />
@@ -986,18 +1002,18 @@ export default function Radix4BoothApp() {
                 {/* Main */}
                 <div className="workbench-main flex-1 overflow-x-auto p-4 md:p-6 xl:p-8">
                     <div className="max-w-6xl mx-auto">
-                        <div className="summary-banner mb-4 flex items-center justify-between gap-4 flex-wrap rounded-[1.4rem] p-4 text-sm text-blue-800">
-                            <div className="flex items-center gap-4 flex-wrap">
+                        <div className="summary-banner mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[1.4rem] p-4 text-sm text-slate-700 dark:text-slate-200">
+                            <div className="flex flex-wrap items-center gap-4">
                                 <div>
                                     <span className="font-semibold">Shift:</span>
-                                    <code className="ml-2 rounded bg-blue-100 px-2 py-0.5 dark:bg-cyan-950/60 dark:text-cyan-100">
+                                    <code className="ml-2 rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/50 dark:text-slate-100">
                                         ARS by 2 on [A | Q | Q[-1]]
                                     </code>
                                 </div>
 
                                 <div>
                                     <span className="font-semibold">Result:</span>
-                                    <code className="ml-2 rounded bg-blue-100 px-2 py-0.5 dark:bg-cyan-950/60 dark:text-cyan-100">
+                                    <code className="ml-2 rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/50 dark:text-slate-100">
                                         A[{bitSize - 1}:0].Q[{bitSize - 1}:0]
                                     </code>
                                 </div>
@@ -1142,7 +1158,7 @@ export default function Radix4BoothApp() {
 
                         {/* Evaluation context */}
                         {currentEvalCtx && currentStepIdx < steps.length - 1 && (
-                            <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-sm flex items-center gap-4 flex-wrap">
+                            <div className="mt-4 flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-950/50">
                                 <span className="font-semibold text-slate-700 dark:text-slate-300">Evaluating:</span>
 
                                 <span className="context-chip font-mono rounded px-2 py-1">
@@ -1177,16 +1193,16 @@ export default function Radix4BoothApp() {
 
             {/* Practice panel */}
             {isPracticeMode && currentStepIdx < steps.length - 1 && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg p-4 z-50">
+                <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-950/92">
                     <div className="max-w-6xl mx-auto">
                         <div className="flex items-center gap-3 mb-3">
-                            <StepForward className="w-5 h-5 text-green-600" />
+                            <StepForward className="h-5 w-5 text-slate-700 dark:text-slate-200" />
                             <h3 className="font-bold text-slate-800 dark:text-slate-200">Your Turn</h3>
                         </div>
 
                         {feedback && (
                             <div
-                                className={`p-2 rounded mb-3 flex items-center gap-2 text-sm ${feedback.type === "success"
+                                className={`mb-3 flex items-center gap-2 rounded p-2 text-sm ${feedback.type === "success"
                                         ? "feedback-success"
                                         : "feedback-error"
                                     }`}
@@ -1237,7 +1253,7 @@ export default function Radix4BoothApp() {
 
                                     <button
                                         onClick={() => handleActionGuess("shift")}
-                                        className="px-4 py-2 border-2 border-slate-400 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900 rounded-lg font-medium text-sm"
+                                        className="rounded-lg border-2 border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-950"
                                     >
                                         0 (shift only)
                                     </button>
@@ -1261,7 +1277,7 @@ export default function Radix4BoothApp() {
                                                 A: e.target.value.replace(/[^01]/g, ""),
                                             })
                                         }
-                                        className="w-40 px-2 py-2 font-mono border border-slate-300 rounded-lg text-center tracking-wider"
+                                        className="w-40 rounded-lg border border-slate-300 px-2 py-2 text-center font-mono tracking-wider dark:border-slate-700 dark:bg-slate-900"
                                     />
                                 </div>
 
@@ -1279,7 +1295,7 @@ export default function Radix4BoothApp() {
                                                 Q: e.target.value.replace(/[^01]/g, ""),
                                             })
                                         }
-                                        className="w-36 px-2 py-2 font-mono border border-slate-300 rounded-lg text-center tracking-wider"
+                                        className="w-36 rounded-lg border border-slate-300 px-2 py-2 text-center font-mono tracking-wider dark:border-slate-700 dark:bg-slate-900"
                                     />
                                 </div>
 
@@ -1297,13 +1313,13 @@ export default function Radix4BoothApp() {
                                                 Q_ED: e.target.value.replace(/[^01]/g, ""),
                                             })
                                         }
-                                        className="w-14 px-2 py-2 font-mono border border-slate-300 rounded-lg text-center"
+                                        className="w-14 rounded-lg border border-slate-300 px-2 py-2 text-center font-mono dark:border-slate-700 dark:bg-slate-900"
                                     />
                                 </div>
 
                                 <button
                                     onClick={handleValueSubmit}
-                                    className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg"
+                                    className={primaryButtonClass}
                                 >
                                     Check
                                 </button>
