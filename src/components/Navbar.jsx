@@ -10,6 +10,7 @@ const ROUTE_ICONS = {
   BoothDefault: Cpu,
   BoothRadix3: Cpu,
   BoothRadix4: Cpu,
+  BoothRadix8: Cpu,
 };
 
 export default function Navbar() {

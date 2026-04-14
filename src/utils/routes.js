@@ -46,6 +46,15 @@ const ROUTE_META = {
     description: 'Radix-4 recoding with +/-2M cases and shifts by 2.',
     badge: 'Algorithm Lab',
   },
+  BoothRadix8: {
+    order: 5,
+    path: '/boothradix8',
+    name: 'Booth Radix-8',
+    navName: 'Radix-8',
+    group: 'algorithm',
+    description: 'Radix-8 recoding with +/-3M, +/-4M, and shifts by 3.',
+    badge: 'Algorithm Lab',
+  },
 };
 
 function formatName(name) {
