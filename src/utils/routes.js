@@ -7,7 +7,7 @@ const ROUTE_META = {
     name: 'Home',
     navName: 'Home',
     group: 'home',
-    description: 'Overview and entry point.',
+    description: 'Start here.',
     badge: 'Overview',
   },
   LearnBasics: {
@@ -16,7 +16,7 @@ const ROUTE_META = {
     name: 'Learn Basics',
     navName: 'Learn Basics',
     group: 'foundation',
-    description: 'Sign-magnitude, two\'s complement, and fixed-point basics.',
+    description: 'SM, C2, and fixed-point basics.',
     badge: 'Foundation Lab',
   },
   BoothDefault: {
@@ -25,7 +25,7 @@ const ROUTE_META = {
     name: 'Booth Default',
     navName: 'Booth Default',
     group: 'algorithm',
-    description: 'Standard Booth flow with the live table and practice mode.',
+    description: 'Regular Booth multiplication.',
     badge: 'Algorithm Lab',
   },
   BoothRadix3: {
@@ -34,7 +34,7 @@ const ROUTE_META = {
     name: 'Booth Radix-3',
     navName: 'Radix-3',
     group: 'algorithm',
-    description: 'Modified Booth recoding with the same table-first workflow.',
+    description: 'Radix-3 Booth with OVR.',
     badge: 'Algorithm Lab',
   },
   BoothRadix4: {
@@ -43,7 +43,7 @@ const ROUTE_META = {
     name: 'Booth Radix-4',
     navName: 'Radix-4',
     group: 'algorithm',
-    description: 'Radix-4 recoding with +/-2M cases and shifts by 2.',
+    description: 'Radix-4 Booth with shifts by 2.',
     badge: 'Algorithm Lab',
   },
   BoothRadix8: {
@@ -52,7 +52,7 @@ const ROUTE_META = {
     name: 'Booth Radix-8',
     navName: 'Radix-8',
     group: 'algorithm',
-    description: 'Radix-8 recoding with +/-3M, +/-4M, and shifts by 3.',
+    description: 'Radix-8 Booth with shifts by 3.',
     badge: 'Algorithm Lab',
   },
 };
@@ -70,7 +70,7 @@ export const dynamicRoutes = Object.keys(pages)
       path: meta.path ?? `/${fileName.toLowerCase()}`,
       name: meta.name ?? formatName(fileName),
       navName: meta.navName ?? meta.name ?? formatName(fileName),
-      description: meta.description ?? 'Interactive study page.',
+      description: meta.description ?? 'Study page.',
       badge: meta.badge ?? 'Lab',
       group: meta.group ?? 'page',
       order: meta.order ?? 99,

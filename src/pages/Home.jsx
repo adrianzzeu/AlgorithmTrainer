@@ -29,8 +29,7 @@ export default function Home() {
                 Booth algorithms, without the clutter.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300 md:text-lg">
-                Pick the representation basics first, then move into the live tables. The table flow
-                stays intact. The shell is just cleaner now.
+                Start with basics, then use the tables.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -57,7 +56,7 @@ export default function Home() {
               <div className="metric-card">
                 <div className="metric-label">Focus</div>
                 <div className="metric-value">Tables</div>
-                <div className="metric-copy">Register state first, polish second.</div>
+                <div className="metric-copy">Clear table work.</div>
               </div>
               <div className="metric-card">
                 <div className="metric-label">Modes</div>
