@@ -38,23 +38,39 @@ const primaryButtonClass =
   'rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 ' +
   'disabled:opacity-40 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
 
-const getBoothOperation = (x_i1, x_i, R) => {
+const getNextR = (x_i1, x_i, R) => {
   const b1 = Number(x_i1);
   const b0 = Number(x_i);
   const r = Number(R);
 
-  if (b1 === 0 && b0 === 0 && r === 0) return { op: 0, R_star: "0" };
-  if (b1 === 0 && b0 === 1 && r === 0) return { op: 1, R_star: "0" };
-  if (b1 === 1 && b0 === 0 && r === 0) return { op: 0, R_star: "0" };
-  if (b1 === 1 && b0 === 1 && r === 0) return { op: -1, R_star: "1" };
-
-  if (b1 === 0 && b0 === 0 && r === 1) return { op: 1, R_star: "0" };
-  if (b1 === 0 && b0 === 1 && r === 1) return { op: 0, R_star: "1" };
-  if (b1 === 1 && b0 === 0 && r === 1) return { op: -1, R_star: "1" };
-  if (b1 === 1 && b0 === 1 && r === 1) return { op: 0, R_star: "1" };
-
-  return { op: 0, R_star: "0" };
+  // R* is the majority function over the current recoding window.
+  return ((b1 & b0) | (b1 & r) | (b0 & r)).toString();
 };
+
+const getBoothOperation = (x_i1, x_i, R) => {
+  const b1 = Number(x_i1);
+  const b0 = Number(x_i);
+  const r = Number(R);
+  const R_star = getNextR(b1, b0, r);
+  const op = (b0 ^ r) === 0 ? 0 : b1 === 0 ? 1 : -1;
+
+  return { op, R_star };
+};
+
+const RADIX3_TRUTH_ROWS = [
+  [0, 0, 0],
+  [0, 0, 1],
+  [0, 1, 0],
+  [0, 1, 1],
+  [1, 0, 0],
+  [1, 0, 1],
+  [1, 1, 0],
+  [1, 1, 1],
+].map(([x_i1, x_i, R]) => {
+  const { op, R_star } = getBoothOperation(x_i1, x_i, R);
+
+  return [x_i1, x_i, R, op === 1 ? "+1" : op === -1 ? "-1" : "0", Number(R_star)];
+});
 
 const generateModifiedBoothSteps = (Q_bin, M_bin, bits) => {
   const steps = [];
@@ -628,16 +644,7 @@ export default function App() {
     }
   };
 
-  const tableRows = [
-    [0, 0, 0, "0", 0],
-    [0, 1, 0, "+1", 0],
-    [1, 0, 0, "0", 0],
-    [1, 1, 0, "-1", 1],
-    [0, 0, 1, "+1", 0],
-    [0, 1, 1, "0", 1],
-    [1, 0, 1, "-1", 1],
-    [1, 1, 1, "0", 1],
-  ];
+  const tableRows = RADIX3_TRUTH_ROWS;
 
   const algorithmPseudo = `Regs: A[bits-1:0], M[bits-1:0], Q[bits:0], R, COUNT
 
@@ -646,11 +653,15 @@ BEGIN:
   Q[bits-1:0] = INBUS, Q[bits] = Q[bits-1]
 
 SCAN:
+  R* = (Q[1] & Q[0]) | (Q[1] & R) | (Q[0] & R)
+
   if Q[1:0]R = 001 or 010 then
-    A = A + M, R = R*
+    A = A + M
 
   if Q[1:0]R = 101 or 110 then
-    A = A - M, R = R*
+    A = A - M
+
+  R = R*
 
 SHIFT:
   A[bits-2:0], Q[bits:0] = A_sum[bits-1:0], Q[bits:1]
