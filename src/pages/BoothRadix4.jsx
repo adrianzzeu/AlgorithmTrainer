@@ -36,6 +36,18 @@ const primaryButtonClass =
     'rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 ' +
     'disabled:opacity-40 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
 
+const toggleButtonClass = (active) =>
+    `rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+        active
+            ? "bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+            : "border border-slate-200 bg-white/80 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300"
+    }`;
+
+const normalizeEvenBits = (bits) => {
+    const safeBits = Math.max(2, bits);
+    return safeBits % 2 === 0 ? safeBits : safeBits + 1;
+};
+
 const chooseEvenRadix4Bits = (qVal, mVal) => {
     const qNeed = Math.max(
         requiredBitsForSignedInt(qVal),
@@ -223,11 +235,14 @@ export default function Radix4BoothApp() {
         Q_ED: "",
     });
     const [feedback, setFeedback] = useState(null);
+    const [bitWidthMode, setBitWidthMode] = useState("auto");
+    const [manualBitSize, setManualBitSize] = useState(8);
 
     const isFractional = mode === "fractional";
 
     const derived = useMemo(() => {
         let bitSize;
+        let autoBitSize;
         let extBits;
         let fracBits = 0;
 
@@ -253,7 +268,10 @@ export default function Radix4BoothApp() {
             const qScaled = scaleFractionToFixedInt(qNum, qDen, fracBits);
             const mScaled = scaleFractionToFixedInt(mNum, mDen, fracBits);
 
-            bitSize = chooseEvenRadix4Bits(qScaled, mScaled);
+            autoBitSize = chooseEvenRadix4Bits(qScaled, mScaled);
+            bitSize = bitWidthMode === "manual"
+                ? normalizeEvenBits(Math.max(autoBitSize, manualBitSize))
+                : autoBitSize;
             extBits = bitSize + 1;
 
             const qData = getFractionalData(qNum, qDen, fracBits, bitSize);
@@ -272,9 +290,14 @@ export default function Radix4BoothApp() {
 
             expectedProduct = (qNum / Math.max(1, qDen)) * (mNum / Math.max(1, mDen));
             note =
-                "Radix-4 fixed-point mode. Best when denominators are powers of 2. Width is auto-selected and rounded to an even number.";
+                bitWidthMode === "manual"
+                    ? `Radix-4 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept even).`
+                    : `Radix-4 fixed-point mode. Best when denominators are powers of 2. Width = ${bitSize} bits (auto, even).`;
         } else {
-            bitSize = chooseEvenRadix4Bits(xInt, yInt);
+            autoBitSize = chooseEvenRadix4Bits(xInt, yInt);
+            bitSize = bitWidthMode === "manual"
+                ? normalizeEvenBits(Math.max(autoBitSize, manualBitSize))
+                : autoBitSize;
             extBits = bitSize + 1;
 
             qC2 = intToC2(xInt, bitSize);
@@ -293,10 +316,18 @@ export default function Radix4BoothApp() {
                 "Radix-4 needs an even width. The app chooses the width automatically and keeps room for ±2M on A.";
         }
 
+        if (!isFractional) {
+            note =
+                bitWidthMode === "manual"
+                    ? `Radix-4 width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept even).`
+                    : "Radix-4 needs an even width. The app chooses it automatically and keeps room for +/-2M on A.";
+        }
+
         const mVal = c2ToInt(mC2);
 
         return {
             bitSize,
+            autoBitSize,
             extBits,
             fracBits,
             qC2,
@@ -314,10 +345,11 @@ export default function Radix4BoothApp() {
             m2Ext: intToC2(2 * mVal, extBits),
             negM2Ext: intToC2(-2 * mVal, extBits),
         };
-    }, [isFractional, xInt, yInt, qNum, qDen, mNum, mDen]);
+    }, [isFractional, xInt, yInt, qNum, qDen, mNum, mDen, bitWidthMode, manualBitSize]);
 
     const {
         bitSize,
+        autoBitSize,
         extBits,
         fracBits,
         qC2,
@@ -378,6 +410,18 @@ export default function Radix4BoothApp() {
 
     const handlePositiveInput = (setter) => (event) => {
         setter(Math.max(1, parseInt(event.target.value, 10) || 1));
+        resetProgress();
+    };
+
+    const handleBitWidthModeChange = (nextMode) => {
+        setBitWidthMode(nextMode);
+        resetProgress();
+    };
+
+    const handleManualBitSizeChange = (event) => {
+        const parsed = parseInt(event.target.value, 10);
+        const safeValue = Number.isFinite(parsed) ? parsed : 2;
+        setManualBitSize(normalizeEvenBits(safeValue));
         resetProgress();
     };
 
@@ -649,22 +693,69 @@ export default function Radix4BoothApp() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-3">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         Register Width
                                     </label>
-                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                                        {bitSize} bits (auto, even)
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleBitWidthModeChange("auto")}
+                                            className={toggleButtonClass(bitWidthMode === "auto")}
+                                        >
+                                            Auto
+                                        </button>
+                                        <button
+                                            onClick={() => handleBitWidthModeChange("manual")}
+                                            className={toggleButtonClass(bitWidthMode === "manual")}
+                                        >
+                                            Manual
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        A / M Variant Width
-                                    </label>
-                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                                        {extBits} bits
+                                {bitWidthMode === "manual" && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Manual Bits (Even)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={autoBitSize}
+                                            step={2}
+                                            value={manualBitSize}
+                                            onChange={handleManualBitSizeChange}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Auto Minimum
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {autoBitSize} bits
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Register Width
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {bitSize} bits
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            A / M Variant Width
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {extBits} bits
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -725,31 +816,78 @@ export default function Radix4BoothApp() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        Fractional Bits
-                                    </label>
-                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                                        {fracBits} bits
-                                    </div>
-                                </div>
-
+                            <div className="space-y-3">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         Register Width
                                     </label>
-                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                                        {bitSize} bits (auto, even)
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleBitWidthModeChange("auto")}
+                                            className={toggleButtonClass(bitWidthMode === "auto")}
+                                        >
+                                            Auto
+                                        </button>
+                                        <button
+                                            onClick={() => handleBitWidthModeChange("manual")}
+                                            className={toggleButtonClass(bitWidthMode === "manual")}
+                                        >
+                                            Manual
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        A / M Variant Width
-                                    </label>
-                                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                                        {extBits} bits
+                                {bitWidthMode === "manual" && (
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Manual Bits (Even)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={autoBitSize}
+                                            step={2}
+                                            value={manualBitSize}
+                                            onChange={handleManualBitSizeChange}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-4 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Fractional Bits
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {fracBits} bits
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Auto Minimum
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {autoBitSize} bits
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Register Width
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {bitSize} bits
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            A / M Variant Width
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {extBits} bits
+                                        </div>
                                     </div>
                                 </div>
                             </div>

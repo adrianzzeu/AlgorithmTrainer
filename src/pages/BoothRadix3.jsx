@@ -38,6 +38,13 @@ const primaryButtonClass =
   'rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800 ' +
   'disabled:opacity-40 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
 
+const toggleButtonClass = (active) =>
+  `rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+    active
+      ? "bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+      : "border border-slate-200 bg-white/80 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300"
+  }`;
+
 const getNextR = (x_i1, x_i, R) => {
   const b1 = Number(x_i1);
   const b0 = Number(x_i);
@@ -213,11 +220,14 @@ export default function App() {
     R: "",
   });
   const [feedback, setFeedback] = useState(null);
+  const [bitWidthMode, setBitWidthMode] = useState("auto");
+  const [manualBitSize, setManualBitSize] = useState(8);
 
   const isFractional = mode === "fractional";
 
   const derived = useMemo(() => {
     let bitSize;
+    let autoBitSize;
     let fracBits = 0;
     let qC2;
     let mC2;
@@ -241,13 +251,14 @@ export default function App() {
       const qScaled = scaleFractionToFixedInt(qNum, qDen, fracBits);
       const mScaled = scaleFractionToFixedInt(mNum, mDen, fracBits);
 
-      bitSize = Math.max(
+      autoBitSize = Math.max(
         2,
         requiredBitsForSignedInt(qScaled),
         requiredBitsForSignedInt(-qScaled),
         requiredBitsForSignedInt(mScaled),
         requiredBitsForSignedInt(-mScaled)
       );
+      bitSize = bitWidthMode === "manual" ? Math.max(autoBitSize, manualBitSize) : autoBitSize;
 
       const qData = getFractionalData(qNum, qDen, fracBits, bitSize);
       const mData = getFractionalData(mNum, mDen, fracBits, bitSize);
@@ -259,20 +270,24 @@ export default function App() {
       mNegC2 = intToC2(-mData.scaledNum, bitSize);
 
       expectedProduct = (qNum / Math.max(1, qDen)) * (mNum / Math.max(1, mDen));
-      note = "Fractional mode uses fixed-point scaling. Best with denominators that are powers of 2.";
+      note =
+        bitWidthMode === "manual"
+          ? `Fractional mode uses fixed-point scaling. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
+          : `Fractional mode uses fixed-point scaling. Best with denominators that are powers of 2. Width = ${bitSize} bits (auto).`;
 
       qBinaryValue = qData.scaledNum;
       mBinaryValue = mData.scaledNum;
       qRegisterLabel = `register value = ${qData.scaledNum} = ${qData.scaledNum}/2^${fracBits}`;
       mRegisterLabel = `register value = ${mData.scaledNum} = ${mData.scaledNum}/2^${fracBits}`;
     } else {
-      bitSize = Math.max(
+      autoBitSize = Math.max(
         2,
         requiredBitsForSignedInt(xInt),
         requiredBitsForSignedInt(-xInt),
         requiredBitsForSignedInt(yInt),
         requiredBitsForSignedInt(-yInt)
       );
+      bitSize = bitWidthMode === "manual" ? Math.max(autoBitSize, manualBitSize) : autoBitSize;
 
       qC2 = intToC2(xInt, bitSize);
       mC2 = intToC2(yInt, bitSize);
@@ -281,7 +296,10 @@ export default function App() {
       mNegC2 = intToC2(-yInt, bitSize);
 
       expectedProduct = xInt * yInt;
-      note = "Bit width is chosen automatically from the operands.";
+      note =
+        bitWidthMode === "manual"
+          ? `Register width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
+          : `Bit width is chosen automatically from the operands (${bitSize} bits).`;
 
       qBinaryValue = xInt;
       mBinaryValue = yInt;
@@ -291,6 +309,7 @@ export default function App() {
 
     return {
       bitSize,
+      autoBitSize,
       fracBits,
       qC2,
       mC2,
@@ -304,10 +323,11 @@ export default function App() {
       qRegisterLabel,
       mRegisterLabel,
     };
-  }, [isFractional, xInt, yInt, qNum, qDen, mNum, mDen]);
+  }, [isFractional, xInt, yInt, qNum, qDen, mNum, mDen, bitWidthMode, manualBitSize]);
 
   const {
     bitSize,
+    autoBitSize,
     fracBits,
     qC2,
     mC2,
@@ -407,6 +427,17 @@ export default function App() {
 
   const handlePositiveInput = (setter) => (event) => {
     setter(Math.max(1, parseInt(event.target.value, 10) || 1));
+    resetProgress();
+  };
+
+  const handleBitWidthModeChange = (nextMode) => {
+    setBitWidthMode(nextMode);
+    resetProgress();
+  };
+
+  const handleManualBitSizeChange = (event) => {
+    const parsed = parseInt(event.target.value, 10);
+    setManualBitSize(Number.isFinite(parsed) ? Math.max(2, parsed) : 2);
     resetProgress();
   };
 
@@ -747,8 +778,40 @@ OUTPUT:
                 <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                   Bit Width
                 </label>
-                <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                  {bitSize} bits (auto)
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleBitWidthModeChange("auto")}
+                      className={toggleButtonClass(bitWidthMode === "auto")}
+                    >
+                      Auto
+                    </button>
+                    <button
+                      onClick={() => handleBitWidthModeChange("manual")}
+                      className={toggleButtonClass(bitWidthMode === "manual")}
+                    >
+                      Manual
+                    </button>
+                  </div>
+
+                  {bitWidthMode === "manual" && (
+                    <input
+                      type="number"
+                      min={Math.max(2, autoBitSize)}
+                      value={manualBitSize}
+                      onChange={handleManualBitSizeChange}
+                      className={inputClass}
+                    />
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                      Auto minimum: {autoBitSize}
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                      Using now: {bitSize}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -808,22 +871,68 @@ OUTPUT:
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                    Fractional Bits
+                    Register Width
                   </label>
-                  <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                    {fracBits} bits (auto)
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleBitWidthModeChange("auto")}
+                      className={toggleButtonClass(bitWidthMode === "auto")}
+                    >
+                      Auto
+                    </button>
+                    <button
+                      onClick={() => handleBitWidthModeChange("manual")}
+                      className={toggleButtonClass(bitWidthMode === "manual")}
+                    >
+                      Manual
+                    </button>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                    Total Register Bits
-                  </label>
-                  <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
-                    {bitSize} bits (auto)
+                {bitWidthMode === "manual" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Manual Bits
+                    </label>
+                    <input
+                      type="number"
+                      min={Math.max(2, autoBitSize)}
+                      value={manualBitSize}
+                      onChange={handleManualBitSizeChange}
+                      className={inputClass}
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Fractional Bits
+                    </label>
+                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                      {fracBits} bits (auto)
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Auto Minimum
+                    </label>
+                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                      {autoBitSize} bits
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                      Total Register Bits
+                    </label>
+                    <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                      {bitSize} bits
+                    </div>
                   </div>
                 </div>
               </div>
