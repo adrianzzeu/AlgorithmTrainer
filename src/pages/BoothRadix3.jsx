@@ -1250,18 +1250,10 @@ OUTPUT:
                         !!block.postState &&
                         currentStepIdx >= block.endIndex;
                       const showPost = hasOp && showShiftedState;
-                      const visibleState =
-                        !hasOp && block.postState && showShiftedState
-                          ? block.postState
-                          : block.preState;
                       const preEval = getEvalCtxFromState(block.preState);
                       const postEval =
                         block.postState && !block.isFinal
                           ? getEvalCtxFromState(block.postState)
-                          : null;
-                      const visibleEval =
-                        !hasOp && !block.isFinal
-                          ? getEvalCtxFromState(visibleState)
                           : null;
                       const blockOvr =
                         showOp || (showShiftedState && !hasOp)
@@ -1354,13 +1346,23 @@ OUTPUT:
                                 </MainSlot>
                               </div>
                             ) : (
-                              <div className="flex justify-center pt-1">
-                                {renderBits(visibleState.A, {
-                                  highlightMsb: true,
-                                  color: showShiftedState
-                                    ? "text-slate-800 dark:text-slate-100"
-                                    : "text-slate-800 dark:text-slate-100",
-                                })}
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  {renderBits(block.preState.A, { highlightMsb: true })}
+                                </MainSlot>
+
+                                <MainSlot />
+                                <MainSlot />
+
+                                <MainSlot>
+                                  {showShiftedState &&
+                                    renderBits(block.postState.A, {
+                                      highlightMsb: true,
+                                      color: block.isFinal
+                                        ? "text-emerald-700 dark:text-emerald-200 font-semibold"
+                                        : "text-slate-800 dark:text-slate-100",
+                                    })}
+                                </MainSlot>
                               </div>
                             )}
                           </td>
@@ -1386,8 +1388,23 @@ OUTPUT:
                                 </MainSlot>
                               </div>
                             ) : (
-                              <div className="font-mono text-[18px] font-bold table-text-emerald pt-1">
-                                {visibleState.Q_extra}
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  <div className="font-mono text-[18px] font-bold table-text-emerald">
+                                    {block.preState.Q_extra}
+                                  </div>
+                                </MainSlot>
+
+                                <MainSlot />
+                                <MainSlot />
+
+                                <MainSlot>
+                                  {showShiftedState && (
+                                    <div className="font-mono text-[18px] font-bold table-text-emerald">
+                                      {block.postState.Q_extra}
+                                    </div>
+                                  )}
+                                </MainSlot>
                               </div>
                             )}
                           </td>
@@ -1434,17 +1451,44 @@ OUTPUT:
                                 </NoteSlot>
                               </div>
                             ) : (
-                              <div className="flex justify-center pt-1">
-                                {renderBits(visibleState.Q, {
-                                  highlightMsb: true,
-                                  qGroup: true,
-                                  highlightIndices: visibleEval
-                                    ? [visibleState.Q.length - 2, visibleState.Q.length - 1]
-                                    : [],
-                                  color: showShiftedState
-                                    ? "text-slate-800 dark:text-slate-100"
-                                    : "text-slate-800 dark:text-slate-100",
-                                })}
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  {renderBits(block.preState.Q, {
+                                    highlightMsb: true,
+                                    qGroup: true,
+                                    highlightIndices: preEval
+                                      ? [block.preState.Q.length - 2, block.preState.Q.length - 1]
+                                      : [],
+                                  })}
+                                </MainSlot>
+
+                                <MainSlot />
+                                <MainSlot />
+
+                                <MainSlot>
+                                  {showShiftedState &&
+                                    renderBits(block.postState.Q, {
+                                      highlightMsb: true,
+                                      qGroup: true,
+                                      highlightIndices: postEval
+                                        ? [block.postState.Q.length - 2, block.postState.Q.length - 1]
+                                        : [],
+                                      bitClassMap: {
+                                        0: "text-emerald-700 dark:text-emerald-200 font-semibold",
+                                      },
+                                      color: block.isFinal
+                                        ? "text-emerald-700 dark:text-emerald-200 font-semibold"
+                                        : "text-slate-800 dark:text-slate-100",
+                                    })}
+                                </MainSlot>
+
+                                <NoteSlot>
+                                  {showShiftedState && (
+                                    <TinyLine color="text-emerald-700 dark:text-emerald-300">
+                                      old Q[{bitSize}] enters MSB
+                                    </TinyLine>
+                                  )}
+                                </NoteSlot>
                               </div>
                             )}
                           </td>
@@ -1484,17 +1528,39 @@ OUTPUT:
                                 </MainSlot>
                               </div>
                             ) : (
-                              <div className="pt-1">
-                                <div
-                                  className={[
-                                    "inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
-                                    showShiftedState
-                                      ? "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200"
-                                      : "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
-                                  ].join(" ")}
-                                >
-                                  {visibleState.R}
-                                </div>
+                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                                <MainSlot>
+                                  <div
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200"
+                                  >
+                                    {block.preState.R}
+                                  </div>
+                                </MainSlot>
+
+                                <MainSlot />
+
+                                <MainSlot>
+                                  {showShiftedState && (
+                                    <TinyLine color={block.postState.R === block.preState.R ? "text-slate-500 dark:text-slate-400" : "text-violet-600 dark:text-violet-300"}>
+                                      {"R* = " + block.postState.R}
+                                    </TinyLine>
+                                  )}
+                                </MainSlot>
+
+                                <MainSlot>
+                                  {showShiftedState && (
+                                    <div
+                                      className={[
+                                        "inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
+                                        block.isFinal
+                                          ? "border-emerald-400/70 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                          : "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+                                      ].join(" ")}
+                                    >
+                                      {block.postState.R}
+                                    </div>
+                                  )}
+                                </MainSlot>
                               </div>
                             )}
                           </td>
