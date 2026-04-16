@@ -412,6 +412,67 @@ export default function Radix8BoothApp() {
         [qC2, mC2, bitSize]
     );
 
+    const stepIndexById = useMemo(
+        () => Object.fromEntries(steps.map((step, index) => [step.id, index])),
+        [steps]
+    );
+
+    const cycleBlocks = useMemo(() => {
+        const blocks = [];
+        const iterations = bitSize / 3;
+
+        for (let i = 0; i < iterations; i++) {
+            const startId = i === 0 ? "init" : `shift_${i - 1}`;
+            const startIndex = stepIndexById[startId];
+            const cycleHasBegun =
+                startIndex != null &&
+                (i === 0 ? currentStepIdx >= startIndex : currentStepIdx > startIndex);
+
+            if (startIndex == null || !cycleHasBegun) {
+                continue;
+            }
+
+            const opIndex = stepIndexById[`op_${i}`];
+            const mathIndex = stepIndexById[`math_${i}`];
+            const shiftIndex = stepIndexById[`shift_${i}`];
+
+            const startState = steps[startIndex];
+            const opStep = opIndex != null ? steps[opIndex] : null;
+            const mathState = mathIndex != null ? steps[mathIndex] : null;
+            const shiftState = shiftIndex != null ? steps[shiftIndex] : null;
+
+            const showOp = opIndex != null && currentStepIdx >= opIndex;
+            const showMath = mathIndex != null && currentStepIdx >= mathIndex;
+            const showShift = shiftIndex != null && currentStepIdx >= shiftIndex;
+
+            const lastVisibleIndex = showShift
+                ? shiftIndex
+                : showMath
+                    ? mathIndex
+                    : showOp
+                        ? opIndex
+                        : startIndex;
+
+            blocks.push({
+                id: `cycle_${i}`,
+                iteration: i,
+                count: startState.count,
+                startState,
+                opStep,
+                mathState,
+                shiftState,
+                showOp,
+                showMath,
+                showShift,
+                isActive:
+                    currentStepIdx >= startIndex &&
+                    currentStepIdx <= lastVisibleIndex,
+            });
+        }
+
+        return blocks;
+    }, [bitSize, currentStepIdx, stepIndexById, steps]);
+
     const resetPractice = () => {
         setPracticePhase("action");
         setUserInputs({
@@ -1254,13 +1315,168 @@ export default function Radix8BoothApp() {
                                 </thead>
 
                                 <tbody className="font-mono">
-                                    {steps.slice(0, currentStepIdx + 1).map((step, idx) => {
-                                        const isActive = idx === currentStepIdx;
-                                        const showEvalHighlight =
-                                            !!step.evalCtx &&
-                                            step.type === "state" &&
-                                            !step.isMathResult &&
-                                            !step.isFinal;
+                                    {cycleBlocks.map((block) => {
+                                        const showEvalHighlight = !!block.startState.evalCtx;
+                                        const isFinalBlock = !!block.shiftState?.isFinal && block.showShift;
+                                        const reserveOpRow = block.showOp || block.showMath || block.showShift;
+                                        const reserveMathRow = block.showMath || block.showShift;
+
+                                        return (
+                                            <tr
+                                                key={block.id}
+                                                className={`border-b align-top transition-colors ${isFinalBlock
+                                                    ? "table-band-rose border-2 border-red-400 dark:border-red-500/70"
+                                                    : block.isActive
+                                                        ? "table-band-amber"
+                                                        : "table-band-slate border-slate-100 dark:border-slate-800"
+                                                    }`}
+                                            >
+                                                <td className="py-4 px-3 text-center text-slate-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 font-semibold">
+                                                    {block.count}
+                                                </td>
+
+                                                <td className="py-4 px-4 border-r border-slate-200 dark:border-slate-700">
+                                                    <div className="grid gap-y-2">
+                                                        <div className="min-h-[24px] flex justify-center">
+                                                            {renderBits(block.startState.A, true)}
+                                                        </div>
+
+                                                        {reserveOpRow && (
+                                                            <div className="min-h-[30px] flex items-center justify-center">
+                                                                {block.showOp && block.opStep && (
+                                                                    <div className="flex items-center justify-center gap-3 text-slate-600 dark:text-slate-300">
+                                                                        <span className="w-4 text-right text-[15px] font-bold">
+                                                                            +
+                                                                        </span>
+                                                                        <div className="border-b-2 border-slate-400 pb-1">
+                                                                            {renderBits(block.opStep.operand, true)}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {reserveMathRow && (
+                                                            <div className="min-h-[24px] flex justify-center">
+                                                                {block.showMath && block.mathState && (
+                                                                    <div className="text-slate-800 dark:text-slate-100">
+                                                                        {renderBits(block.mathState.A, true)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {block.showShift && block.shiftState && (
+                                                            <div
+                                                                className={`min-h-[24px] flex justify-center ${block.shiftState.isFinal
+                                                                    ? "table-text-rose"
+                                                                    : "text-sky-700 dark:text-sky-300"
+                                                                    }`}
+                                                            >
+                                                                {renderBits(block.shiftState.A, true)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                <td className="py-4 px-4 border-r border-slate-200 dark:border-slate-700">
+                                                    <div className="grid gap-y-2">
+                                                        <div className="min-h-[24px] flex justify-center">
+                                                            {renderBits(block.startState.Q, true, showEvalHighlight ? 3 : 0)}
+                                                        </div>
+
+                                                        {reserveOpRow && <div className="min-h-[30px]" />}
+
+                                                        {reserveMathRow && <div className="min-h-[24px]" />}
+
+                                                        {block.showShift && block.shiftState && (
+                                                            <div
+                                                                className={`min-h-[24px] flex justify-center ${block.shiftState.isFinal
+                                                                    ? "table-text-rose"
+                                                                    : "text-sky-700 dark:text-sky-300"
+                                                                    }`}
+                                                            >
+                                                                {renderBits(block.shiftState.Q, true)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                <td className="py-4 px-3 text-center border-r border-slate-200 dark:border-slate-700 font-bold">
+                                                    <div className="grid gap-y-2">
+                                                        <div
+                                                            className={`min-h-[24px] flex items-center justify-center ${showEvalHighlight
+                                                                ? "text-cyan-600 dark:text-cyan-300"
+                                                                : "text-slate-700 dark:text-slate-300"}`}
+                                                        >
+                                                            {block.startState.Q_ED}
+                                                        </div>
+
+                                                        {reserveOpRow && <div className="min-h-[30px]" />}
+
+                                                        {reserveMathRow && <div className="min-h-[24px]" />}
+
+                                                        {block.showShift && block.shiftState && (
+                                                            <div
+                                                                className={`min-h-[24px] flex items-center justify-center ${block.shiftState.isFinal
+                                                                    ? "table-text-rose"
+                                                                    : "text-sky-700 dark:text-sky-300"}`}
+                                                            >
+                                                                {block.shiftState.Q_ED}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                <td className="py-4 px-4 text-center text-slate-500 dark:text-slate-400">
+                                                    <div className="grid gap-y-2">
+                                                        <div className="min-h-[24px] flex items-center justify-center">
+                                                            {block.iteration === 0 && (
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                                                                        M
+                                                                    </div>
+                                                                    <div className="flex justify-center">
+                                                                        {renderBits(mExt, true)}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {reserveOpRow && (
+                                                            <div className="min-h-[30px] flex items-center justify-center">
+                                                                {block.showOp && block.opStep && (
+                                                                    <div
+                                                                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${block.opStep.evalCtx.opType > 0
+                                                                            ? "status-chip-positive"
+                                                                            : "status-chip-negative"
+                                                                            }`}
+                                                                    >
+                                                                        {block.opStep.opText}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {reserveMathRow && <div className="min-h-[24px]" />}
+
+                                                        {block.showShift && (
+                                                            <div className="min-h-[24px] flex items-center justify-center">
+                                                                <div className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 whitespace-nowrap">
+                                                                    ARS by 3
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {isFinalBlock && (
+                                                            <div className="font-semibold table-text-rose">
+                                                                Final AQ
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
 
                                         if (step.type === "state") {
                                             return (
