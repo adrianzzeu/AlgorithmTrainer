@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import HoverInfo from '../components/ui/HoverInfo';
 import ConversionCard from '../components/ui/ConversionCard';
+import ResultVerificationInfo from '../components/ui/ResultVerificationInfo';
 import {
     addBinaryStr,
     getCountStr,
@@ -43,21 +44,14 @@ const toggleButtonClass = (active) =>
             : "border border-slate-200 bg-white/80 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300"
     }`;
 
-const normalizeEvenBits = (bits) => {
+const normalizeRadix4Bits = (bits) => {
     const safeBits = Math.max(2, bits);
     return safeBits % 2 === 0 ? safeBits : safeBits + 1;
 };
 
-const chooseEvenRadix4Bits = (qVal, mVal) => {
-    const qNeed = Math.max(
-        requiredBitsForSignedInt(qVal),
-        requiredBitsForSignedInt(-qVal)
-    );
-
-    const mNeed = Math.max(
-        requiredBitsForSignedInt(mVal),
-        requiredBitsForSignedInt(-mVal)
-    );
+const chooseRadix4Bits = (qVal, mVal) => {
+    const qNeed = Math.max(2, requiredBitsForSignedInt(qVal));
+    const mNeed = Math.max(2, requiredBitsForSignedInt(mVal));
 
     const extNeed = Math.max(
         2,
@@ -67,11 +61,7 @@ const chooseEvenRadix4Bits = (qVal, mVal) => {
         requiredBitsForSignedInt(-2 * mVal)
     );
 
-    let bits = Math.max(2, qNeed, mNeed, extNeed - 1);
-
-    if (bits % 2 !== 0) bits++;
-
-    return bits;
+    return normalizeRadix4Bits(Math.max(2, qNeed, mNeed, extNeed - 1));
 };
 
 const getRadix4Op = (b2, b1, b0) => {
@@ -99,7 +89,7 @@ const getRadix4Op = (b2, b1, b0) => {
 const generateRadix4Steps = (Q_bin, M_bin, bits) => {
     const steps = [];
     const extBits = bits + 1;
-    const iterations = bits / 2;
+    const iterations = Math.ceil(bits / 2);
     const lastDisplayedCount = Math.max(0, iterations - 1);
 
     let A = "0".repeat(extBits);
@@ -268,9 +258,9 @@ export default function Radix4BoothApp() {
             const qScaled = scaleFractionToFixedInt(qNum, qDen, fracBits);
             const mScaled = scaleFractionToFixedInt(mNum, mDen, fracBits);
 
-            autoBitSize = chooseEvenRadix4Bits(qScaled, mScaled);
+            autoBitSize = chooseRadix4Bits(qScaled, mScaled);
             bitSize = bitWidthMode === "manual"
-                ? normalizeEvenBits(Math.max(autoBitSize, manualBitSize))
+                ? normalizeRadix4Bits(Math.max(autoBitSize, manualBitSize))
                 : autoBitSize;
             extBits = bitSize + 1;
 
@@ -292,11 +282,11 @@ export default function Radix4BoothApp() {
             note =
                 bitWidthMode === "manual"
                     ? `Radix-4 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept even).`
-                    : `Radix-4 fixed-point mode. Best when denominators are powers of 2. Width = ${bitSize} bits (auto, even).`;
+                    : `Radix-4 fixed-point mode. Width = ${bitSize} bits (minimum working width, kept even).`;
         } else {
-            autoBitSize = chooseEvenRadix4Bits(xInt, yInt);
+            autoBitSize = chooseRadix4Bits(xInt, yInt);
             bitSize = bitWidthMode === "manual"
-                ? normalizeEvenBits(Math.max(autoBitSize, manualBitSize))
+                ? normalizeRadix4Bits(Math.max(autoBitSize, manualBitSize))
                 : autoBitSize;
             extBits = bitSize + 1;
 
@@ -313,14 +303,21 @@ export default function Radix4BoothApp() {
 
             expectedProduct = xInt * yInt;
             note =
-                "Radix-4 needs an even width. The app chooses the width automatically and keeps room for ±2M on A.";
+                "Radix-4 chooses the minimum working width, kept even, while keeping room for +/-2M on A.";
         }
 
         if (!isFractional) {
             note =
                 bitWidthMode === "manual"
                     ? `Radix-4 width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept even).`
-                    : "Radix-4 needs an even width. The app chooses it automatically and keeps room for +/-2M on A.";
+                    : "Radix-4 chooses the minimum working width, kept even, while keeping room for +/-2M on A.";
+        }
+
+        if (!isFractional) {
+            note =
+                bitWidthMode === "manual"
+                    ? `Radix-4 width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
+                    : "Radix-4 chooses the minimum width that still keeps room for +/-2M on A.";
         }
 
         const mVal = c2ToInt(mC2);
@@ -390,7 +387,7 @@ export default function Radix4BoothApp() {
 
     const cycleBlocks = useMemo(() => {
         const blocks = [];
-        const iterations = bitSize / 2;
+        const iterations = Math.ceil(bitSize / 2);
 
         for (let i = 0; i < iterations; i++) {
             const startId = i === 0 ? "init" : `shift_${i - 1}`;
@@ -482,7 +479,7 @@ export default function Radix4BoothApp() {
     const handleManualBitSizeChange = (event) => {
         const parsed = parseInt(event.target.value, 10);
         const safeValue = Number.isFinite(parsed) ? parsed : 2;
-        setManualBitSize(normalizeEvenBits(safeValue));
+        setManualBitSize(normalizeRadix4Bits(safeValue));
         resetProgress();
     };
 
@@ -680,7 +677,7 @@ export default function Radix4BoothApp() {
         ["111", "0"],
     ];
 
-    const radix4Pseudo = `1. Choose an even width N automatically.
+    const radix4Pseudo = `1. Choose the minimum working width N automatically.
 2. Convert operands to C2 on N bits.
 3. Init:
    A = 0...(N+1 bits)
@@ -690,7 +687,7 @@ export default function Radix4BoothApp() {
 4. Precompute on N+1 bits:
    M, -M, 2M, -2M
 
-5. Repeat N/2 times:
+5. Repeat ceil(N/2) times:
    read (Q[1], Q[0], Q[-1])
 
    000 or 111 -> 0
@@ -801,7 +798,7 @@ export default function Radix4BoothApp() {
                                 {bitWidthMode === "manual" && (
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Manual Bits (Even)
+                                            Manual Bits
                                         </label>
                                         <input
                                             type="number"
@@ -924,7 +921,7 @@ export default function Radix4BoothApp() {
                                 {bitWidthMode === "manual" && (
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Manual Bits (Even)
+                                            Manual Bits
                                         </label>
                                         <input
                                             type="number"
@@ -1054,6 +1051,19 @@ export default function Radix4BoothApp() {
 
                                 <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-1">
                                     {finalProduct.display}
+                                </div>
+
+                                <div className="mt-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                                    <span>Highlighted Result</span>
+                                    <ResultVerificationInfo
+                                        binary={finalProduct.binary}
+                                        scalePower={mode === "fractional" ? 2 * fracBits : 0}
+                                        align="right"
+                                    />
+                                </div>
+
+                                <div className="mt-1 inline-flex max-w-full break-all rounded-2xl border-2 border-emerald-400/70 bg-emerald-50/80 px-3 py-2 font-mono text-sm tracking-[0.2em] text-emerald-800 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-100">
+                                    {finalProduct.binary}
                                 </div>
 
                                 <div className="text-xs mt-1 text-slate-600 dark:text-slate-400">

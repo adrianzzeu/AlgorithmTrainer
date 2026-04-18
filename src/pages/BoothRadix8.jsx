@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import HoverInfo from '../components/ui/HoverInfo';
 import ConversionCard from '../components/ui/ConversionCard';
+import ResultVerificationInfo from '../components/ui/ResultVerificationInfo';
 import {
     addBinaryStr,
     getCountStr,
@@ -43,23 +44,11 @@ const toggleButtonClass = (active) =>
             : "border border-slate-200 bg-white/80 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300"
     }`;
 
-const normalizeMultipleOfThreeBits = (bits) => {
-    const safeBits = Math.max(3, bits);
-    const remainder = safeBits % 3;
-    return remainder === 0 ? safeBits : safeBits + (3 - remainder);
-};
+const normalizeRadix8Bits = (bits) => Math.max(2, bits);
 
-const chooseMultipleOfThreeRadix8Bits = (qVal, mVal) => {
-    const qNeed = Math.max(
-        requiredBitsForSignedInt(qVal),
-        requiredBitsForSignedInt(-qVal)
-    );
-
-    const mNeed = Math.max(
-        requiredBitsForSignedInt(mVal),
-        requiredBitsForSignedInt(-mVal)
-    );
-
+const getRadix8BaseBitNeed = (qVal, mVal) => {
+    const qNeed = Math.max(2, requiredBitsForSignedInt(qVal));
+    const mNeed = Math.max(2, requiredBitsForSignedInt(mVal));
     const extNeed = Math.max(
         2,
         requiredBitsForSignedInt(mVal),
@@ -72,11 +61,29 @@ const chooseMultipleOfThreeRadix8Bits = (qVal, mVal) => {
         requiredBitsForSignedInt(-4 * mVal)
     );
 
-    let bits = Math.max(3, qNeed, mNeed, extNeed - 2);
+    return Math.max(3, qNeed, mNeed, extNeed - 2);
+};
 
-    if (bits % 3 !== 0) bits += 3 - (bits % 3);
+const isExactC2Width = (value, bits) => {
+    const encoded = intToC2(value, bits);
+    return encoded.length === bits && c2ToInt(encoded) === value;
+};
 
-    return bits;
+const getRadix8WindowBits = (qBin, iteration) => {
+    const bits = qBin.length;
+    const signBit = qBin[0];
+    const bitAt = (indexFromLsb) => {
+        if (indexFromLsb < 0) return "0";
+        if (indexFromLsb >= bits) return signBit;
+        return qBin[bits - 1 - indexFromLsb];
+    };
+
+    return {
+        b3: bitAt(iteration * 3 + 2),
+        b2: bitAt(iteration * 3 + 1),
+        b1: bitAt(iteration * 3),
+        b0: bitAt(iteration * 3 - 1),
+    };
 };
 
 const RADIX8_OPS = {
@@ -106,8 +113,9 @@ const getRadix8Op = (b3, b2, b1, b0) => {
 const generateRadix8Steps = (Q_bin, M_bin, bits) => {
     const steps = [];
     const extBits = bits + 2;
-    const iterations = bits / 3;
+    const iterations = Math.ceil(bits / 3);
     const lastDisplayedCount = Math.max(0, iterations - 1);
+    const originalQ = Q_bin;
 
     let A = "0".repeat(extBits);
     let Q = Q_bin;
@@ -139,17 +147,16 @@ const generateRadix8Steps = (Q_bin, M_bin, bits) => {
     });
 
     for (let i = 0; i < iterations; i++) {
-        const b3 = Q[bits - 3];
-        const b2 = Q[bits - 2];
-        const b1 = Q[bits - 1];
-        const b0 = Q_ED;
+        const { b3, b2, b1, b0 } = getRadix8WindowBits(originalQ, i);
 
+        const shiftAmount = Math.min(3, bits - i * 3);
         const opInfo = getRadix8Op(b3, b2, b1, b0);
         const evalCtx = {
             b3,
             b2,
             b1,
             b0,
+            shiftAmount,
             ...opInfo,
         };
 
@@ -194,7 +201,8 @@ const generateRadix8Steps = (Q_bin, M_bin, bits) => {
         }
 
         const combined = A + Q + Q_ED;
-        const shifted = combined[0].repeat(3) + combined.slice(0, combined.length - 3);
+        const shifted =
+            combined[0].repeat(shiftAmount) + combined.slice(0, combined.length - shiftAmount);
 
         A = shifted.slice(0, extBits);
         Q = shifted.slice(extBits, extBits + bits);
@@ -213,6 +221,7 @@ const generateRadix8Steps = (Q_bin, M_bin, bits) => {
             isInit: false,
             isMathResult: false,
             isFinal,
+            shiftAmount,
             evalCtx: null,
         });
     }
@@ -230,6 +239,57 @@ const generateRadix8Steps = (Q_bin, M_bin, bits) => {
         extBits,
         iterations,
     };
+};
+
+const getRadix8FinalProductBinary = (Q_bin, M_bin, bits) => {
+    const { steps } = generateRadix8Steps(Q_bin, M_bin, bits);
+    const finalStep = steps[steps.length - 1];
+
+    if (!finalStep || finalStep.type !== "state") return null;
+
+    return finalStep.A.substring(2) + finalStep.Q;
+};
+
+const doesRadix8WidthWork = (qVal, mVal, bits) => {
+    if (bits < 2) return false;
+
+    const extBits = bits + 2;
+    const scaledOperands = [
+        mVal,
+        -mVal,
+        2 * mVal,
+        -2 * mVal,
+        3 * mVal,
+        -3 * mVal,
+        4 * mVal,
+        -4 * mVal,
+    ];
+
+    if (!isExactC2Width(qVal, bits) || !isExactC2Width(mVal, bits)) {
+        return false;
+    }
+
+    if (scaledOperands.some((value) => !isExactC2Width(value, extBits))) {
+        return false;
+    }
+
+    const qBin = intToC2(qVal, bits);
+    const mBin = intToC2(mVal, bits);
+    const finalProductBin = getRadix8FinalProductBinary(qBin, mBin, bits);
+
+    return finalProductBin != null && c2ToInt(finalProductBin) === qVal * mVal;
+};
+
+const chooseRadix8Bits = (qVal, mVal) => {
+    const minCandidate = normalizeRadix8Bits(getRadix8BaseBitNeed(qVal, mVal));
+
+    for (let candidate = minCandidate, attempts = 0; attempts < 16; candidate += 1, attempts++) {
+        if (doesRadix8WidthWork(qVal, mVal, candidate)) {
+            return candidate;
+        }
+    }
+
+    return minCandidate;
 };
 
 export default function Radix8BoothApp() {
@@ -257,7 +317,7 @@ export default function Radix8BoothApp() {
     });
     const [feedback, setFeedback] = useState(null);
     const [bitWidthMode, setBitWidthMode] = useState("auto");
-    const [manualBitSize, setManualBitSize] = useState(9);
+    const [manualBitSize, setManualBitSize] = useState(8);
 
     const isFractional = mode === "fractional";
 
@@ -289,9 +349,9 @@ export default function Radix8BoothApp() {
             const qScaled = scaleFractionToFixedInt(qNum, qDen, fracBits);
             const mScaled = scaleFractionToFixedInt(mNum, mDen, fracBits);
 
-            autoBitSize = chooseMultipleOfThreeRadix8Bits(qScaled, mScaled);
+            autoBitSize = chooseRadix8Bits(qScaled, mScaled);
             bitSize = bitWidthMode === "manual"
-                ? normalizeMultipleOfThreeBits(Math.max(autoBitSize, manualBitSize))
+                ? normalizeRadix8Bits(Math.max(autoBitSize, manualBitSize))
                 : autoBitSize;
             extBits = bitSize + 2;
 
@@ -312,12 +372,12 @@ export default function Radix8BoothApp() {
             expectedProduct = (qNum / Math.max(1, qDen)) * (mNum / Math.max(1, mDen));
             note =
                 bitWidthMode === "manual"
-                    ? `Radix-8 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept as a multiple of 3).`
-                    : "Radix-8 fixed-point mode. Width is auto-selected, rounded to a multiple of 3, and extended for +/-4M.";
+                    ? `Radix-8 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
+                    : "Radix-8 fixed-point mode. Width is auto-selected to the minimum working size and extended for +/-4M.";
         } else {
-            autoBitSize = chooseMultipleOfThreeRadix8Bits(xInt, yInt);
+            autoBitSize = chooseRadix8Bits(xInt, yInt);
             bitSize = bitWidthMode === "manual"
-                ? normalizeMultipleOfThreeBits(Math.max(autoBitSize, manualBitSize))
+                ? normalizeRadix8Bits(Math.max(autoBitSize, manualBitSize))
                 : autoBitSize;
             extBits = bitSize + 2;
 
@@ -334,14 +394,14 @@ export default function Radix8BoothApp() {
 
             expectedProduct = xInt * yInt;
             note =
-                "Radix-8 needs a width that is a multiple of 3. The app chooses it automatically and keeps room for +/-4M on A.";
+                "Radix-8 auto width picks the minimum working size and leaves room for +/-4M on A.";
         }
 
         if (!isFractional) {
             note =
                 bitWidthMode === "manual"
-                    ? `Radix-8 width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept as a multiple of 3).`
-                    : "Radix-8 needs a width that is a multiple of 3. The app chooses it automatically and keeps room for +/-4M on A.";
+                    ? `Radix-8 width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
+                    : "Radix-8 auto width picks the minimum working size and leaves room for +/-4M on A.";
         }
 
         const mVal = c2ToInt(mC2);
@@ -419,7 +479,7 @@ export default function Radix8BoothApp() {
 
     const cycleBlocks = useMemo(() => {
         const blocks = [];
-        const iterations = bitSize / 3;
+        const iterations = Math.ceil(bitSize / 3);
 
         for (let i = 0; i < iterations; i++) {
             const startId = i === 0 ? "init" : `shift_${i - 1}`;
@@ -510,8 +570,8 @@ export default function Radix8BoothApp() {
 
     const handleManualBitSizeChange = (event) => {
         const parsed = parseInt(event.target.value, 10);
-        const safeValue = Number.isFinite(parsed) ? parsed : 3;
-        setManualBitSize(normalizeMultipleOfThreeBits(safeValue));
+        const safeValue = Number.isFinite(parsed) ? parsed : 2;
+        setManualBitSize(normalizeRadix8Bits(safeValue));
         resetProgress();
     };
 
@@ -623,7 +683,7 @@ export default function Radix8BoothApp() {
         if (guessedAction === ctx.actionKey) {
             setFeedback({
                 type: "success",
-                msg: "Correct! Now compute the registers after the arithmetic right shift by 3.",
+                msg: `Correct! Now compute the registers after the arithmetic right shift by ${ctx.shiftAmount}.`,
             });
 
             setPracticePhase("evaluate");
@@ -694,7 +754,7 @@ export default function Radix8BoothApp() {
         ["1111", "0"],
     ];
 
-    const radix8Pseudo = `1. Choose a width N that is a multiple of 3.
+    const radix8Pseudo = `1. Choose the minimum safe width N.
 2. Convert operands to C2 on N bits.
 3. Init:
    A = 0...(N+2 bits)
@@ -704,8 +764,9 @@ export default function Radix8BoothApp() {
 4. Precompute on N+2 bits:
    M, -M, 2M, -2M, 3M, -3M, 4M, -4M
 
-5. Repeat N/3 times:
-   read (Q[2], Q[1], Q[0], Q[-1])
+5. Repeat ceil(N/3) times:
+   recode the next radix-8 group from the original multiplier bits
+   using sign extension at the top and Q[-1] = 0 at the bottom
 
    0000 or 1111 -> 0
    0001 or 0010 -> +M
@@ -719,7 +780,8 @@ export default function Radix8BoothApp() {
 
    A = A + selected_operand
 
-   Arithmetic Right Shift by 3
+   Arithmetic Right Shift by the current group size
+   usually 3, but the last cycle can be 1 or 2
    on the combined register:
    [ A | Q | Q[-1] ]
 
@@ -738,7 +800,7 @@ export default function Radix8BoothApp() {
                         <div>
                             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200">Radix-8 Booth</h1>
                             <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                                Multiple-of-3 width and practice
+                                Auto width and practice
                             </p>
                         </div>
                     </div>
@@ -819,12 +881,12 @@ export default function Radix8BoothApp() {
                                 {bitWidthMode === "manual" && (
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Manual Bits (Multiple of 3)
+                                            Manual Bits
                                         </label>
                                         <input
                                             type="number"
                                             min={autoBitSize}
-                                            step={3}
+                                            step={1}
                                             value={manualBitSize}
                                             onChange={handleManualBitSizeChange}
                                             className={inputClass}
@@ -942,12 +1004,12 @@ export default function Radix8BoothApp() {
                                 {bitWidthMode === "manual" && (
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Manual Bits (Multiple of 3)
+                                            Manual Bits
                                         </label>
                                         <input
                                             type="number"
                                             min={autoBitSize}
-                                            step={3}
+                                            step={1}
                                             value={manualBitSize}
                                             onChange={handleManualBitSizeChange}
                                             className={inputClass}
@@ -1092,6 +1154,19 @@ export default function Radix8BoothApp() {
 
                                 <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-1">
                                     {finalProduct.display}
+                                </div>
+
+                                <div className="mt-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                                    <span>Highlighted Result</span>
+                                    <ResultVerificationInfo
+                                        binary={finalProduct.binary}
+                                        scalePower={mode === "fractional" ? 2 * fracBits : 0}
+                                        align="right"
+                                    />
+                                </div>
+
+                                <div className="mt-1 inline-flex max-w-full break-all rounded-2xl border-2 border-emerald-400/70 bg-emerald-50/80 px-3 py-2 font-mono text-sm tracking-[0.2em] text-emerald-800 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-100">
+                                    {finalProduct.binary}
                                 </div>
 
                                 <div className="text-xs mt-1 text-slate-600 dark:text-slate-400">
@@ -1269,7 +1344,7 @@ export default function Radix8BoothApp() {
                                 <div>
                                     <span className="font-semibold">Shift:</span>
                                     <code className="ml-2 rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/50 dark:text-slate-100">
-                                        ARS by 3 on [A | Q | Q[-1]]
+                                        ARS by current group size on [A | Q | Q[-1]]
                                     </code>
                                 </div>
 
@@ -1463,7 +1538,7 @@ export default function Radix8BoothApp() {
                                                         {block.showShift && (
                                                             <div className="min-h-[24px] flex items-center justify-center">
                                                                 <div className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 whitespace-nowrap">
-                                                                    ARS by 3
+                                                                    ARS by {block.shiftState.shiftAmount}
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1526,7 +1601,7 @@ export default function Radix8BoothApp() {
                                                         {step.isFinal && <span className="font-semibold table-text-rose">Final</span>}
                                                         {!step.isInit && !step.isMathResult && !step.isFinal && (
                                                             <span className="font-mono text-[11px] text-violet-600 dark:text-violet-400 whitespace-nowrap font-bold">
-                                                                ARS by 3 {"->"}
+                                                                ARS by {step.shiftAmount} {"->"}
                                                             </span>
                                                         )}
                                                     </td>
@@ -1780,6 +1855,7 @@ export default function Radix8BoothApp() {
         </div>
     );
 }
+
 
 
 

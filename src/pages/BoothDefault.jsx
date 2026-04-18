@@ -8,6 +8,7 @@ import {
   StepForward,
   XCircle,
 } from 'lucide-react';
+import ResultVerificationInfo from '../components/ui/ResultVerificationInfo';
 import { addBinaryStr, intToC2, requiredBitsForSignedInt } from '../utils/binaryHelpers';
 
 const PAIR_RULES = [
@@ -44,7 +45,6 @@ const chooseBoothBits = (qVal, mVal) =>
   Math.max(
     2,
     requiredBitsForSignedInt(qVal),
-    requiredBitsForSignedInt(-qVal),
     requiredBitsForSignedInt(mVal),
     requiredBitsForSignedInt(-mVal)
   );
@@ -784,12 +784,17 @@ export default function BoothDefault() {
             {currentStepIdx === steps.length - 1 && (
               <div className="surface-card mt-4 rounded-[1.5rem] p-6 text-center">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Multiplication Complete</h3>
-                <p className="mt-3 text-slate-700 dark:text-slate-300">
-                  Final result:
-                  <span className="ml-2 rounded border border-slate-200 bg-white px-2 py-1 font-mono dark:border-slate-700 dark:bg-slate-950/50">
-                    {finalStep.A} {finalStep.Q}
-                  </span>
-                </p>
+                <div className="mt-3 text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="font-medium">Final result</span>
+                    <ResultVerificationInfo binary={`${finalStep.A}${finalStep.Q}`} />
+                  </div>
+                  <div className="mt-2">
+                    <span className="inline-flex rounded-2xl border-2 border-emerald-400/70 bg-emerald-50/80 px-3 py-2 font-mono tracking-[0.2em] text-emerald-800 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-100">
+                      {finalStep.A} {finalStep.Q}
+                    </span>
+                  </div>
+                </div>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                   Decimal: <strong className="text-slate-800 dark:text-slate-100">{qValue * mValue}</strong>
                 </p>

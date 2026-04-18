@@ -138,6 +138,39 @@ export const getSmToC2Explanation = (num, bits) => {
   };
 };
 
+export const getC2ToValueExplanation = (binStr, scalePower = 0) => {
+  if (!binStr) return null;
+
+  const signBit = binStr[0];
+  const raw = c2ToInt(binStr);
+  const unsignedValue = parseInt(binStr, 2);
+  const isNegative = signBit === "1";
+  const inverted = isNegative ? invertBits(binStr) : null;
+  const plusOne = isNegative
+    ? addBinaryStr(inverted, "1".padStart(binStr.length, "0")).result
+    : null;
+  const magnitude = isNegative ? parseInt(plusOne, 2) : unsignedValue;
+  const scaleDenom = 2 ** Math.max(0, scalePower);
+  const decimal = raw / scaleDenom;
+  const fractionText =
+    scalePower > 0 ? formatFraction(raw, scaleDenom) : null;
+
+  return {
+    binStr,
+    signBit,
+    isNegative,
+    raw,
+    unsignedValue,
+    inverted,
+    plusOne,
+    magnitude,
+    scalePower,
+    scaleDenom,
+    decimal,
+    fractionText,
+  };
+};
+
 export const groupBits = (bin, size = 4) => {
   if (!bin) return "";
   const out = [];

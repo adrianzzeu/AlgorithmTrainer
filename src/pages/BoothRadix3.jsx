@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import HoverInfo from '../components/ui/HoverInfo';
 import ConversionCard from '../components/ui/ConversionCard';
+import ResultVerificationInfo from '../components/ui/ResultVerificationInfo';
 import {
   addBinaryStr,
   getTwosComplementStr,
@@ -63,6 +64,14 @@ const getBoothOperation = (x_i1, x_i, R) => {
 
   return { op, R_star };
 };
+
+const chooseRadix3Bits = (qVal, mVal) =>
+  Math.max(
+    2,
+    requiredBitsForSignedInt(qVal),
+    requiredBitsForSignedInt(mVal),
+    requiredBitsForSignedInt(-mVal)
+  );
 
 const RADIX3_TRUTH_ROWS = [
   [0, 0, 0],
@@ -251,13 +260,7 @@ export default function App() {
       const qScaled = scaleFractionToFixedInt(qNum, qDen, fracBits);
       const mScaled = scaleFractionToFixedInt(mNum, mDen, fracBits);
 
-      autoBitSize = Math.max(
-        2,
-        requiredBitsForSignedInt(qScaled),
-        requiredBitsForSignedInt(-qScaled),
-        requiredBitsForSignedInt(mScaled),
-        requiredBitsForSignedInt(-mScaled)
-      );
+      autoBitSize = chooseRadix3Bits(qScaled, mScaled);
       bitSize = bitWidthMode === "manual" ? Math.max(autoBitSize, manualBitSize) : autoBitSize;
 
       const qData = getFractionalData(qNum, qDen, fracBits, bitSize);
@@ -280,13 +283,7 @@ export default function App() {
       qRegisterLabel = `register value = ${qData.scaledNum} = ${qData.scaledNum}/2^${fracBits}`;
       mRegisterLabel = `register value = ${mData.scaledNum} = ${mData.scaledNum}/2^${fracBits}`;
     } else {
-      autoBitSize = Math.max(
-        2,
-        requiredBitsForSignedInt(xInt),
-        requiredBitsForSignedInt(-xInt),
-        requiredBitsForSignedInt(yInt),
-        requiredBitsForSignedInt(-yInt)
-      );
+      autoBitSize = chooseRadix3Bits(xInt, yInt);
       bitSize = bitWidthMode === "manual" ? Math.max(autoBitSize, manualBitSize) : autoBitSize;
 
       qC2 = intToC2(xInt, bitSize);
@@ -998,6 +995,19 @@ OUTPUT:
 
                 <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {finalProduct.display}
+                </div>
+
+                <div className="mt-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                  <span>Highlighted Result</span>
+                  <ResultVerificationInfo
+                    binary={finalProduct.binary}
+                    scalePower={mode === "fractional" ? 2 * fracBits : 0}
+                    align="right"
+                  />
+                </div>
+
+                <div className="mt-1 inline-flex max-w-full break-all rounded-2xl border-2 border-emerald-400/70 bg-emerald-50/80 px-3 py-2 font-mono text-sm tracking-[0.2em] text-emerald-800 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-100">
+                  {finalProduct.binary}
                 </div>
 
                 <div className="text-xs mt-1 text-slate-600">
