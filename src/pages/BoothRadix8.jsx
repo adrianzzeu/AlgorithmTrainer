@@ -683,7 +683,7 @@ export default function Radix8BoothApp() {
         if (guessedAction === ctx.actionKey) {
             setFeedback({
                 type: "success",
-                msg: `Correct! Now compute the registers after the arithmetic right shift by ${ctx.shiftAmount}.`,
+                msg: "Correct! Now compute the registers after the arithmetic right shift by 3.",
             });
 
             setPracticePhase("evaluate");
@@ -780,13 +780,12 @@ export default function Radix8BoothApp() {
 
    A = A + selected_operand
 
-   Arithmetic Right Shift by the current group size
-   usually 3, but the last cycle can be 1 or 2
+   Arithmetic Right Shift by 3
    on the combined register:
    [ A | Q | Q[-1] ]
 
 6. Final product:
-   P = A[N-1:0] · Q[N-1:0]`;
+   P = A[N-1:0] Â· Q[N-1:0]`;
 
     return (
         <div className="booth-page min-h-screen">
@@ -1344,7 +1343,7 @@ export default function Radix8BoothApp() {
                                 <div>
                                     <span className="font-semibold">Shift:</span>
                                     <code className="ml-2 rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/50 dark:text-slate-100">
-                                        ARS by current group size on [A | Q | Q[-1]]
+                                        ARS by 3 on [A | Q | Q[-1]]
                                     </code>
                                 </div>
 
@@ -1444,11 +1443,15 @@ export default function Radix8BoothApp() {
                                                         {block.showShift && block.shiftState && (
                                                             <div
                                                                 className={`min-h-[24px] flex justify-center ${block.shiftState.isFinal
-                                                                    ? "table-text-rose"
+                                                                    ? "text-slate-800 dark:text-slate-100"
                                                                     : "text-sky-700 dark:text-sky-300"
                                                                     }`}
                                                             >
-                                                                {renderBits(block.shiftState.A, true)}
+                                                                {renderBits(
+                                                                    block.shiftState.A,
+                                                                    true,
+                                                                    block.shiftState.isFinal ? bitSize : 0
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1467,11 +1470,15 @@ export default function Radix8BoothApp() {
                                                         {block.showShift && block.shiftState && (
                                                             <div
                                                                 className={`min-h-[24px] flex justify-center ${block.shiftState.isFinal
-                                                                    ? "table-text-rose"
+                                                                    ? "text-slate-800 dark:text-slate-100"
                                                                     : "text-sky-700 dark:text-sky-300"
                                                                     }`}
                                                             >
-                                                                {renderBits(block.shiftState.Q, true)}
+                                                                {renderBits(
+                                                                    block.shiftState.Q,
+                                                                    true,
+                                                                    block.shiftState.isFinal ? bitSize : 0
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1494,7 +1501,7 @@ export default function Radix8BoothApp() {
                                                         {block.showShift && block.shiftState && (
                                                             <div
                                                                 className={`min-h-[24px] flex items-center justify-center ${block.shiftState.isFinal
-                                                                    ? "table-text-rose"
+                                                                    ? "text-slate-500 dark:text-slate-400"
                                                                     : "text-sky-700 dark:text-sky-300"}`}
                                                             >
                                                                 {block.shiftState.Q_ED}
@@ -1538,7 +1545,7 @@ export default function Radix8BoothApp() {
                                                         {block.showShift && (
                                                             <div className="min-h-[24px] flex items-center justify-center">
                                                                 <div className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 whitespace-nowrap">
-                                                                    ARS by {block.shiftState.shiftAmount}
+                                                                    ARS by 3
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1601,7 +1608,7 @@ export default function Radix8BoothApp() {
                                                         {step.isFinal && <span className="font-semibold table-text-rose">Final</span>}
                                                         {!step.isInit && !step.isMathResult && !step.isFinal && (
                                                             <span className="font-mono text-[11px] text-violet-600 dark:text-violet-400 whitespace-nowrap font-bold">
-                                                                ARS by {step.shiftAmount} {"->"}
+                                                                ARS by 3 {"->"}
                                                             </span>
                                                         )}
                                                     </td>
@@ -1855,8 +1862,3 @@ export default function Radix8BoothApp() {
         </div>
     );
 }
-
-
-
-
-

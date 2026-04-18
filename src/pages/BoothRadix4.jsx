@@ -44,12 +44,9 @@ const toggleButtonClass = (active) =>
             : "border border-slate-200 bg-white/80 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300"
     }`;
 
-const normalizeRadix4Bits = (bits) => {
-    const safeBits = Math.max(2, bits);
-    return safeBits % 2 === 0 ? safeBits : safeBits + 1;
-};
+const normalizeRadix4Bits = (bits) => Math.max(2, bits);
 
-const chooseRadix4Bits = (qVal, mVal) => {
+const getRadix4BaseBitNeed = (qVal, mVal) => {
     const qNeed = Math.max(2, requiredBitsForSignedInt(qVal));
     const mNeed = Math.max(2, requiredBitsForSignedInt(mVal));
 
@@ -61,7 +58,28 @@ const chooseRadix4Bits = (qVal, mVal) => {
         requiredBitsForSignedInt(-2 * mVal)
     );
 
-    return normalizeRadix4Bits(Math.max(2, qNeed, mNeed, extNeed - 1));
+    return Math.max(2, qNeed, mNeed, extNeed - 1);
+};
+
+const isExactC2Width = (value, bits) => {
+    const encoded = intToC2(value, bits);
+    return encoded.length === bits && c2ToInt(encoded) === value;
+};
+
+const getRadix4WindowBits = (qBin, iteration) => {
+    const bits = qBin.length;
+    const signBit = qBin[0];
+    const bitAt = (indexFromLsb) => {
+        if (indexFromLsb < 0) return "0";
+        if (indexFromLsb >= bits) return signBit;
+        return qBin[bits - 1 - indexFromLsb];
+    };
+
+    return {
+        b2: bitAt(iteration * 2 + 1),
+        b1: bitAt(iteration * 2),
+        b0: bitAt(iteration * 2 - 1),
+    };
 };
 
 const getRadix4Op = (b2, b1, b0) => {
@@ -91,6 +109,7 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
     const extBits = bits + 1;
     const iterations = Math.ceil(bits / 2);
     const lastDisplayedCount = Math.max(0, iterations - 1);
+    const originalQ = Q_bin;
 
     let A = "0".repeat(extBits);
     let Q = Q_bin;
@@ -118,15 +137,15 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
     });
 
     for (let i = 0; i < iterations; i++) {
-        const b2 = Q[bits - 2];
-        const b1 = Q[bits - 1];
-        const b0 = Q_ED;
+        const { b2, b1, b0 } = getRadix4WindowBits(originalQ, i);
+        const shiftAmount = Math.min(2, bits - i * 2);
 
         const opInfo = getRadix4Op(b2, b1, b0);
         const evalCtx = {
             b2,
             b1,
             b0,
+            shiftAmount,
             ...opInfo,
         };
 
@@ -167,7 +186,8 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
         }
 
         const combined = A + Q + Q_ED;
-        const shifted = combined[0].repeat(2) + combined.slice(0, combined.length - 2);
+        const shifted =
+            combined[0].repeat(shiftAmount) + combined.slice(0, combined.length - shiftAmount);
 
         A = shifted.slice(0, extBits);
         Q = shifted.slice(extBits, extBits + bits);
@@ -186,6 +206,7 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
             isInit: false,
             isMathResult: false,
             isFinal,
+            shiftAmount,
             evalCtx: null,
         });
     }
@@ -199,6 +220,48 @@ const generateRadix4Steps = (Q_bin, M_bin, bits) => {
         extBits,
         iterations,
     };
+};
+
+const getRadix4FinalProductBinary = (Q_bin, M_bin, bits) => {
+    const { steps } = generateRadix4Steps(Q_bin, M_bin, bits);
+    const finalStep = steps[steps.length - 1];
+
+    if (!finalStep || finalStep.type !== "state") return null;
+
+    return finalStep.A.substring(1) + finalStep.Q;
+};
+
+const doesRadix4WidthWork = (qVal, mVal, bits) => {
+    if (bits < 2) return false;
+
+    const extBits = bits + 1;
+    const scaledOperands = [mVal, -mVal, 2 * mVal, -2 * mVal];
+
+    if (!isExactC2Width(qVal, bits) || !isExactC2Width(mVal, bits)) {
+        return false;
+    }
+
+    if (scaledOperands.some((value) => !isExactC2Width(value, extBits))) {
+        return false;
+    }
+
+    const qBin = intToC2(qVal, bits);
+    const mBin = intToC2(mVal, bits);
+    const finalProductBin = getRadix4FinalProductBinary(qBin, mBin, bits);
+
+    return finalProductBin != null && c2ToInt(finalProductBin) === qVal * mVal;
+};
+
+const chooseRadix4Bits = (qVal, mVal) => {
+    const minCandidate = normalizeRadix4Bits(getRadix4BaseBitNeed(qVal, mVal));
+
+    for (let candidate = minCandidate, attempts = 0; attempts < 16; candidate += 1, attempts++) {
+        if (doesRadix4WidthWork(qVal, mVal, candidate)) {
+            return candidate;
+        }
+    }
+
+    return minCandidate;
 };
 
 export default function Radix4BoothApp() {
@@ -281,8 +344,8 @@ export default function Radix4BoothApp() {
             expectedProduct = (qNum / Math.max(1, qDen)) * (mNum / Math.max(1, mDen));
             note =
                 bitWidthMode === "manual"
-                    ? `Radix-4 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept even).`
-                    : `Radix-4 fixed-point mode. Width = ${bitSize} bits (minimum working width, kept even).`;
+                    ? `Radix-4 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
+                    : `Radix-4 fixed-point mode. Width = ${bitSize} bits (minimum working width).`;
         } else {
             autoBitSize = chooseRadix4Bits(xInt, yInt);
             bitSize = bitWidthMode === "manual"
@@ -303,21 +366,14 @@ export default function Radix4BoothApp() {
 
             expectedProduct = xInt * yInt;
             note =
-                "Radix-4 chooses the minimum working width, kept even, while keeping room for +/-2M on A.";
-        }
-
-        if (!isFractional) {
-            note =
-                bitWidthMode === "manual"
-                    ? `Radix-4 width locked to ${bitSize} bits (auto minimum ${autoBitSize}, kept even).`
-                    : "Radix-4 chooses the minimum working width, kept even, while keeping room for +/-2M on A.";
+                "Radix-4 auto width picks the minimum working size and leaves room for +/-2M on A.";
         }
 
         if (!isFractional) {
             note =
                 bitWidthMode === "manual"
                     ? `Radix-4 width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
-                    : "Radix-4 chooses the minimum width that still keeps room for +/-2M on A.";
+                    : "Radix-4 auto width picks the minimum working size and leaves room for +/-2M on A.";
         }
 
         const mVal = c2ToInt(mC2);
@@ -614,7 +670,7 @@ export default function Radix4BoothApp() {
         if (guessedAction === ctx.actionKey) {
             setFeedback({
                 type: "success",
-                msg: "Correct! Now compute the registers after the arithmetic right shift by 2.",
+                msg: `Correct! Now compute the registers after the arithmetic right shift by ${ctx.shiftAmount}.`,
             });
 
             setPracticePhase("evaluate");
@@ -661,7 +717,7 @@ export default function Radix4BoothApp() {
         } else {
             setFeedback({
                 type: "error",
-                msg: "Incorrect. Remember: apply the operation first, then arithmetic right shift the combined register by 2.",
+                msg: "Incorrect. Remember: apply the operation first, then arithmetic right shift the combined register by the current group size.",
             });
         }
     };
@@ -677,7 +733,7 @@ export default function Radix4BoothApp() {
         ["111", "0"],
     ];
 
-    const radix4Pseudo = `1. Choose the minimum working width N automatically.
+    const radix4Pseudo = `1. Choose the minimum safe width N.
 2. Convert operands to C2 on N bits.
 3. Init:
    A = 0...(N+1 bits)
@@ -688,7 +744,8 @@ export default function Radix4BoothApp() {
    M, -M, 2M, -2M
 
 5. Repeat ceil(N/2) times:
-   read (Q[1], Q[0], Q[-1])
+   recode the next radix-4 group from the original multiplier bits
+   using sign extension at the top and Q[-1] = 0 at the bottom
 
    000 or 111 -> 0
    001 or 010 -> +M
@@ -698,12 +755,13 @@ export default function Radix4BoothApp() {
 
    A = A + selected_operand
 
-   Arithmetic Right Shift by 2
+   Arithmetic Right Shift by the current group size
+   usually 2, but the last cycle can be 1
    on the combined register:
    [ A | Q | Q[-1] ]
 
 6. Final product:
-   P = A[N-1:0] · Q[N-1:0]`;
+   P = A[N-1:0] . Q[N-1:0]`;
 
     return (
         <div className="booth-page min-h-screen">
@@ -803,7 +861,7 @@ export default function Radix4BoothApp() {
                                         <input
                                             type="number"
                                             min={autoBitSize}
-                                            step={2}
+                                            step={1}
                                             value={manualBitSize}
                                             onChange={handleManualBitSizeChange}
                                             className={inputClass}
@@ -926,7 +984,7 @@ export default function Radix4BoothApp() {
                                         <input
                                             type="number"
                                             min={autoBitSize}
-                                            step={2}
+                                            step={1}
                                             value={manualBitSize}
                                             onChange={handleManualBitSizeChange}
                                             className={inputClass}
@@ -1239,7 +1297,7 @@ export default function Radix4BoothApp() {
                                 <div>
                                     <span className="font-semibold">Shift:</span>
                                     <code className="ml-2 rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/50 dark:text-slate-100">
-                                        ARS by 2 on [A | Q | Q[-1]]
+                                        ARS by current group size on [A | Q | Q[-1]]
                                     </code>
                                 </div>
 
@@ -1433,7 +1491,7 @@ export default function Radix4BoothApp() {
                                                         {block.showShift && (
                                                             <div className="min-h-[24px] flex items-center justify-center">
                                                                 <div className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 whitespace-nowrap">
-                                                                    ARS by 2
+                                                                    ARS by {block.shiftState.shiftAmount}
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1496,7 +1554,7 @@ export default function Radix4BoothApp() {
                                                         {step.isFinal && <span className="font-semibold table-text-rose">Final</span>}
                                                         {!step.isInit && !step.isMathResult && !step.isFinal && (
                                                             <span className="font-mono text-[11px] text-violet-600 dark:text-violet-400 whitespace-nowrap font-bold">
-                                                                ARS by 2 ↘
+                                                                ARS by {step.shiftAmount} {"->"}
                                                             </span>
                                                         )}
                                                     </td>
