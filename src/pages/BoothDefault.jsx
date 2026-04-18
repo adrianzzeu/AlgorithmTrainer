@@ -53,6 +53,20 @@ const renderBits = (bitStr) =>
     </span>
   ));
 
+const renderQBits = (bitStr, highlightLsb = false) =>
+  bitStr.split('').map((bit, index) => (
+    <span
+      key={`${bitStr}-${index}`}
+      className={`inline-block w-4 text-center ${
+        highlightLsb && index === bitStr.length - 1
+          ? 'rounded-full border border-cyan-400 font-semibold text-cyan-600 dark:text-cyan-300'
+          : ''
+      }`}
+    >
+      {bit}
+    </span>
+  ));
+
 const renderQWithBracket = (Q, Q1, highlightPair) => {
   const msbs = Q.slice(0, -1);
   const lsb = Q[Q.length - 1];
@@ -177,6 +191,65 @@ export default function BoothDefault() {
   );
 
   const { steps, qValue, mValue, qBinary, mBinary, negMBinary } = boothData;
+  const stepIndexById = useMemo(
+    () => Object.fromEntries(steps.map((step, index) => [step.id, index])),
+    [steps]
+  );
+  const cycleBlocks = useMemo(() => {
+    const blocks = [];
+
+    for (let i = 0; i < bitSize; i++) {
+      const startId = i === 0 ? 'init' : `state_shift_${i - 1}`;
+      const startIndex = stepIndexById[startId];
+      const cycleHasBegun =
+        startIndex != null &&
+        (i === 0 ? currentStepIdx >= startIndex : currentStepIdx > startIndex);
+
+      if (startIndex == null || !cycleHasBegun) continue;
+
+      const opIndex = stepIndexById[`op_${i}`];
+      const mathIndex = stepIndexById[`state_math_${i}`];
+      const arrowIndex = stepIndexById[`arrow_${i}`];
+      const shiftIndex = stepIndexById[`state_shift_${i}`];
+
+      const startState = steps[startIndex];
+      const opStep = opIndex != null ? steps[opIndex] : null;
+      const mathState = mathIndex != null ? steps[mathIndex] : null;
+      const shiftState = shiftIndex != null ? steps[shiftIndex] : null;
+
+      const showOp = opIndex != null && currentStepIdx >= opIndex;
+      const showMath = mathIndex != null && currentStepIdx >= mathIndex;
+      const showShiftAction = arrowIndex != null && currentStepIdx >= arrowIndex;
+      const showShiftState = shiftIndex != null && currentStepIdx >= shiftIndex;
+
+      const lastVisibleIndex = showShiftState
+        ? shiftIndex
+        : showShiftAction
+          ? arrowIndex
+          : showMath
+            ? mathIndex
+            : showOp
+              ? opIndex
+              : startIndex;
+
+      blocks.push({
+        id: `cycle_${i}`,
+        iteration: i,
+        count: startState.count,
+        startState,
+        opStep,
+        mathState,
+        shiftState,
+        showOp,
+        showMath,
+        showShiftAction,
+        showShiftState,
+        isActive: currentStepIdx >= startIndex && currentStepIdx <= lastVisibleIndex,
+      });
+    }
+
+    return blocks;
+  }, [bitSize, currentStepIdx, stepIndexById, steps]);
   const finalStep = steps[steps.length - 1];
   const rangeMin = -(2 ** (bitSize - 1));
   const rangeMax = 2 ** (bitSize - 1) - 1;
@@ -376,15 +449,181 @@ export default function BoothDefault() {
               <table className="w-full border-collapse font-mono text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
-                    <th className="w-12 px-4 py-3 text-center font-semibold"></th>
+                    <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold dark:border-slate-700">COUNT</th>
                     <th className="border-r border-slate-200 px-2 py-3 text-center font-semibold italic dark:border-slate-700">A</th>
                     <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold italic dark:border-slate-700">Q</th>
-                    <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold italic dark:border-slate-700">M</th>
-                    <th className="px-4 py-3 text-center font-semibold">COUNT</th>
+                    <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold dark:border-slate-700">Q[-1]</th>
+                    <th className="px-4 py-3 text-center font-semibold">M / Action</th>
                   </tr>
                 </thead>
                 <tbody className="text-base text-slate-800 dark:text-slate-100">
-                  {steps.slice(0, currentStepIdx + 1).map((step, index) => {
+                  {cycleBlocks.map((block) => {
+                    const showEvalHighlight = block.isActive && !block.showShiftState;
+                    const isFinalBlock = Boolean(block.shiftState?.isFinal && block.showShiftState);
+                    const reserveOpRow =
+                      block.showOp || block.showMath || block.showShiftAction || block.showShiftState;
+                    const reserveMathRow =
+                      block.showMath || block.showShiftAction || block.showShiftState;
+
+                    return (
+                      <tr
+                        key={block.id}
+                        className={`border-b align-top transition-colors ${
+                          isFinalBlock
+                            ? 'table-band-rose border-2 border-red-400 dark:border-red-500/70'
+                            : block.isActive
+                              ? 'table-band-amber'
+                              : 'table-band-slate border-slate-100 dark:border-slate-800'
+                        }`}
+                      >
+                        <td className="border-r border-slate-200 px-4 py-4 text-center font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                          {block.count}
+                        </td>
+
+                        <td className="border-r border-slate-200 px-2 py-4 dark:border-slate-700">
+                          <div className="grid gap-y-2">
+                            <div className="min-h-[24px] flex justify-center">
+                              {renderBits(block.startState.A)}
+                            </div>
+
+                            {reserveOpRow && (
+                              <div className="min-h-[30px] flex items-center justify-center">
+                                {block.showOp && block.opStep && (
+                                  <div className="flex items-center justify-center gap-3 text-slate-600 dark:text-slate-300">
+                                    <span className="w-4 text-right text-[15px] font-bold">{block.opStep.opText}</span>
+                                    <div className="border-b-2 border-slate-400 pb-1">
+                                      {renderBits(block.opStep.opVal)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {reserveMathRow && (
+                              <div className="min-h-[24px] flex justify-center">
+                                {block.showMath && block.mathState && (
+                                  <div className="text-slate-800 dark:text-slate-100">
+                                    {renderBits(block.mathState.A)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {block.showShiftState && block.shiftState && (
+                              <div
+                                className={`min-h-[24px] flex justify-center ${
+                                  block.shiftState.isFinal
+                                    ? 'table-text-rose'
+                                    : 'text-sky-700 dark:text-sky-300'
+                                }`}
+                              >
+                                <div className={block.shiftState.isFinal ? 'rounded border-2 border-slate-900 px-1 py-0.5 dark:border-slate-100' : ''}>
+                                  {renderBits(block.shiftState.A)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
+                          <div className="grid gap-y-2">
+                            <div className="min-h-[24px] flex justify-center">
+                              {renderQBits(block.startState.Q, showEvalHighlight)}
+                            </div>
+
+                            {reserveOpRow && <div className="min-h-[30px]" />}
+
+                            {reserveMathRow && <div className="min-h-[24px]" />}
+
+                            {block.showShiftState && block.shiftState && (
+                              <div
+                                className={`min-h-[24px] flex justify-center ${
+                                  block.shiftState.isFinal
+                                    ? 'table-text-rose'
+                                    : 'text-sky-700 dark:text-sky-300'
+                                }`}
+                              >
+                                <div className={block.shiftState.isFinal ? 'rounded border-2 border-slate-900 px-1 py-0.5 dark:border-slate-100' : ''}>
+                                  {renderBits(block.shiftState.Q)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="border-r border-slate-200 px-4 py-4 text-center font-bold dark:border-slate-700">
+                          <div className="grid gap-y-2">
+                            <div
+                              className={`min-h-[24px] flex items-center justify-center ${
+                                showEvalHighlight
+                                  ? 'text-cyan-600 dark:text-cyan-300'
+                                  : 'text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              {block.startState.Q1}
+                            </div>
+
+                            {reserveOpRow && <div className="min-h-[30px]" />}
+
+                            {reserveMathRow && <div className="min-h-[24px]" />}
+
+                            {block.showShiftState && block.shiftState && (
+                              <div
+                                className={`min-h-[24px] flex items-center justify-center ${
+                                  block.shiftState.isFinal
+                                    ? 'table-text-rose'
+                                    : 'text-sky-700 dark:text-sky-300'
+                                }`}
+                              >
+                                {block.shiftState.Q1}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4 text-center text-slate-500 dark:text-slate-400">
+                          <div className="grid gap-y-2">
+                            <div className="min-h-[24px] flex items-center justify-center">
+                              {block.iteration === 0 && (
+                                <div className="space-y-1">
+                                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                                    M
+                                  </div>
+                                  <div className="flex justify-center">{renderBits(mBinary)}</div>
+                                </div>
+                              )}
+                            </div>
+
+                            {reserveOpRow && (
+                              <div className="min-h-[30px] flex items-center justify-center">
+                                {block.showOp && block.opStep && (
+                                  <div
+                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                                      block.opStep.opText === '+'
+                                        ? 'status-chip-positive'
+                                        : 'status-chip-negative'
+                                    }`}
+                                  >
+                                    {block.opStep.opLabel}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {reserveMathRow && <div className="min-h-[24px]" />}
+
+                            {block.showShiftAction && (
+                              <div className="min-h-[24px] flex items-center justify-center">
+                                <div className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 whitespace-nowrap">
+                                  ARS
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+
                     if (step.type === 'state') {
                       const isEvalRow =
                         !step.isFinal &&
