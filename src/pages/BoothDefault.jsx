@@ -8,7 +8,7 @@ import {
   StepForward,
   XCircle,
 } from 'lucide-react';
-import { addBinaryStr, intToC2 } from '../utils/binaryHelpers';
+import { addBinaryStr, intToC2, requiredBitsForSignedInt } from '../utils/binaryHelpers';
 
 const PAIR_RULES = [
   ['00', 'Shift only'],
@@ -29,7 +29,25 @@ const primaryButtonClass =
   'rounded-xl border border-slate-900 bg-slate-900 px-5 py-2 font-semibold text-white transition hover:bg-slate-800 ' +
   'disabled:opacity-40 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
 
+const toggleButtonClass = (active) =>
+  `rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+    active
+      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
+      : 'border border-slate-200 bg-white/80 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300'
+  }`;
+
 const createEmptyPracticeInputs = () => ({ A: '', Q: '', Q1: '' });
+
+const normalizeBoothBits = (bits) => Math.max(2, bits);
+
+const chooseBoothBits = (qVal, mVal) =>
+  Math.max(
+    2,
+    requiredBitsForSignedInt(qVal),
+    requiredBitsForSignedInt(-qVal),
+    requiredBitsForSignedInt(mVal),
+    requiredBitsForSignedInt(-mVal)
+  );
 
 const clampToSignedWidth = (num, bits) => {
   const min = -(2 ** (bits - 1));
@@ -116,7 +134,15 @@ const generateBoothSteps = (multiplier, multiplicand, bits) => {
     const pair = Q[bits - 1] + Q1;
 
     if (pair === '01') {
-      steps.push({ id: `op_${i}`, type: 'op', opText: '+', opLabel: '+M', opVal: M });
+      steps.push({
+        id: `op_${i}`,
+        type: 'op',
+        opText: '+',
+        opLabel: '+M',
+        opVal: M,
+        displayOpText: '+',
+        displayVal: M,
+      });
       A = addBinary(A, M);
       steps.push({
         id: `state_math_${i}`,
@@ -130,7 +156,15 @@ const generateBoothSteps = (multiplier, multiplicand, bits) => {
         isFinal: false,
       });
     } else if (pair === '10') {
-      steps.push({ id: `op_${i}`, type: 'op', opText: '-', opLabel: '-M', opVal: M });
+      steps.push({
+        id: `op_${i}`,
+        type: 'op',
+        opText: '-',
+        opLabel: '-M',
+        opVal: M,
+        displayOpText: '+',
+        displayVal: MNeg,
+      });
       A = addBinary(A, MNeg);
       steps.push({
         id: `state_math_${i}`,
@@ -178,12 +212,22 @@ const generateBoothSteps = (multiplier, multiplicand, bits) => {
 export default function BoothDefault() {
   const [multiplier, setMultiplier] = useState(-4);
   const [multiplicand, setMultiplicand] = useState(7);
-  const [bitSize, setBitSize] = useState(4);
+  const [bitWidthMode, setBitWidthMode] = useState('auto');
+  const [manualBitSize, setManualBitSize] = useState(4);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [isPracticeMode, setIsPracticeMode] = useState(false);
   const [practicePhase, setPracticePhase] = useState('action');
   const [userInputs, setUserInputs] = useState(createEmptyPracticeInputs());
   const [feedback, setFeedback] = useState(null);
+
+  const autoBitSize = useMemo(
+    () => chooseBoothBits(multiplier, multiplicand),
+    [multiplier, multiplicand]
+  );
+  const bitSize =
+    bitWidthMode === 'manual'
+      ? normalizeBoothBits(Math.max(autoBitSize, manualBitSize))
+      : autoBitSize;
 
   const boothData = useMemo(
     () => generateBoothSteps(multiplier, multiplicand, bitSize),
@@ -353,11 +397,43 @@ export default function BoothDefault() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">Bit Width</label>
-              <select value={bitSize} onChange={(event) => { setBitSize(parseInt(event.target.value, 10)); resetProgress(); }} className={inputClass}>
-                <option value={4}>4-bit</option>
-                <option value={6}>6-bit</option>
-                <option value={8}>8-bit</option>
-              </select>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setBitWidthMode('auto'); resetProgress(); }}
+                  className={toggleButtonClass(bitWidthMode === 'auto')}
+                >
+                  Auto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setBitWidthMode('manual'); resetProgress(); }}
+                  className={toggleButtonClass(bitWidthMode === 'manual')}
+                >
+                  Manual
+                </button>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                  Auto minimum: {autoBitSize}
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                  Using now: {bitSize}
+                </div>
+              </div>
+              {bitWidthMode === 'manual' && (
+                <input
+                  type="number"
+                  min={autoBitSize}
+                  value={manualBitSize}
+                  onChange={(event) => {
+                    const parsed = parseInt(event.target.value, 10);
+                    setManualBitSize(normalizeBoothBits(Number.isFinite(parsed) ? parsed : 2));
+                    resetProgress();
+                  }}
+                  className={`${inputClass} mt-2`}
+                />
+              )}
             </div>
           </div>
 
@@ -490,9 +566,11 @@ export default function BoothDefault() {
                               <div className="min-h-[30px] flex items-center justify-center">
                                 {block.showOp && block.opStep && (
                                   <div className="flex items-center justify-center gap-3 text-slate-600 dark:text-slate-300">
-                                    <span className="w-4 text-right text-[15px] font-bold">{block.opStep.opText}</span>
+                                    <span className="w-4 text-right text-[15px] font-bold">
+                                      {block.opStep.displayOpText ?? block.opStep.opText}
+                                    </span>
                                     <div className="border-b-2 border-slate-400 pb-1">
-                                      {renderBits(block.opStep.opVal)}
+                                      {renderBits(block.opStep.displayVal ?? block.opStep.opVal)}
                                     </div>
                                   </div>
                                 )}
