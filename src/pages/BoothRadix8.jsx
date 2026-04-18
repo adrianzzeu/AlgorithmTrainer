@@ -594,19 +594,52 @@ export default function Radix8BoothApp() {
         }
     };
 
-    const renderBits = (bitStr, highlightMsb = false, highlightTailCount = 0) => {
+    const maxVisibleRegisterBits = Math.max(extBits, bitSize + 1);
+    const bitDisplay =
+        maxVisibleRegisterBits >= 18
+            ? {
+                wrapClass: "tracking-[0.02em] text-[12px]",
+                cellClass: "w-[0.72rem]",
+                tableTextClass: "text-xs",
+            }
+            : maxVisibleRegisterBits >= 15
+                ? {
+                    wrapClass: "tracking-[0.04em] text-[13px]",
+                    cellClass: "w-[0.8rem]",
+                    tableTextClass: "text-xs",
+                }
+                : maxVisibleRegisterBits >= 12
+                    ? {
+                        wrapClass: "tracking-[0.08em] text-[14px]",
+                        cellClass: "w-[0.92rem]",
+                        tableTextClass: "text-sm",
+                    }
+                    : {
+                        wrapClass: "tracking-wider text-[15px]",
+                        cellClass: "w-4",
+                        tableTextClass: "text-sm",
+                    };
+
+    const renderBits = (
+        bitStr,
+        highlightMsb = false,
+        highlightTailCount = 0,
+        highlightHeadCount = 0
+    ) => {
         if (!bitStr) return null;
 
         return (
-            <span className="font-mono tracking-wider">
+            <span className={`font-mono ${bitDisplay.wrapClass}`}>
                 {bitStr.split("").map((b, i) => {
                     const isHighlightedTail = highlightTailCount > 0 && i >= bitStr.length - highlightTailCount;
+                    const isHighlightedHead = highlightHeadCount > 0 && i < highlightHeadCount;
 
                     return (
                         <span
                             key={`${bitStr}-${i}`}
-                            className={`inline-block w-4 text-center ${i === 0 && highlightMsb ? "text-slate-700 dark:text-slate-200 font-bold" : ""
+                            className={`inline-flex justify-center text-center ${bitDisplay.cellClass} ${i === 0 && highlightMsb ? "text-slate-700 dark:text-slate-200 font-bold" : ""
                                 } ${isHighlightedTail ? "border-b-2 border-red-400 font-semibold" : ""
+                                } ${isHighlightedHead ? "rounded-full border border-fuchsia-400 text-fuchsia-700 dark:text-fuchsia-300 font-semibold" : ""
                                 }`}
                         >
                             {b}
@@ -893,7 +926,7 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-4 gap-3">
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                             Auto Minimum
@@ -909,6 +942,15 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {bitSize} bits
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Q Register Width
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {bitSize + 1} bits
                                         </div>
                                     </div>
 
@@ -1016,7 +1058,7 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-4 gap-3">
+                                <div className="grid grid-cols-5 gap-3">
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                             Fractional Bits
@@ -1041,6 +1083,15 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {bitSize} bits
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                            Q Register Width
+                                        </label>
+                                        <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
+                                            {bitSize + 1} bits
                                         </div>
                                     </div>
 
@@ -1353,6 +1404,13 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
                                         lower {2 * bitSize} bits of [A | Q]
                                     </code>
                                 </div>
+
+                                <div>
+                                    <span className="font-semibold">Model:</span>
+                                    <code className="ml-2 rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/50 dark:text-slate-100">
+                                        base N={bitSize}, Q={bitSize + 1}, A={extBits}
+                                    </code>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -1366,8 +1424,8 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
                         </div>
 
                         {/* Table */}
-                        <div className="step-table-surface rounded-[1.5rem] overflow-hidden">
-                            <table className="w-full text-sm">
+                        <div className="step-table-surface overflow-x-auto overflow-y-hidden rounded-[1.5rem]">
+                            <table className={`min-w-max w-full ${bitDisplay.tableTextClass}`}>
                                 <thead>
                                     <tr className="bg-slate-50/90 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                                         <th className="py-3 px-3 text-center font-semibold border-r border-slate-200 dark:border-slate-700">
@@ -1450,7 +1508,8 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
                                                                 {renderBits(
                                                                     block.shiftState.A,
                                                                     true,
-                                                                    block.shiftState.isFinal ? Math.max(0, bitSize - 1) : 0
+                                                                    block.shiftState.isFinal ? Math.max(0, bitSize - 1) : 0,
+                                                                    block.shiftState.isFinal ? 0 : 3
                                                                 )}
                                                             </div>
                                                         )}
@@ -1582,7 +1641,12 @@ const radix8Pseudo = `1. Choose the minimum safe base width N.
 
                                                     <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700">
                                                         <div className="flex justify-center">
-                                                            {renderBits(step.A, true, step.isFinal ? Math.max(0, bitSize - 1) : 0)}
+                                                            {renderBits(
+                                                                step.A,
+                                                                true,
+                                                                step.isFinal ? Math.max(0, bitSize - 1) : 0,
+                                                                !step.isInit && !step.isMathResult && !step.isFinal ? 3 : 0
+                                                            )}
                                                         </div>
                                                     </td>
 
