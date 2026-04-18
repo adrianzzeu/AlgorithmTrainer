@@ -61,7 +61,7 @@ const getRadix8BaseBitNeed = (qVal, mVal) => {
         requiredBitsForSignedInt(-4 * mVal)
     );
 
-    return Math.max(3, qNeed, mNeed, extNeed - 2);
+    return Math.max(2, qNeed, mNeed, extNeed - 2);
 };
 
 const isExactC2Width = (value, bits) => {
@@ -69,20 +69,14 @@ const isExactC2Width = (value, bits) => {
     return encoded.length === bits && c2ToInt(encoded) === value;
 };
 
-const getRadix8WindowBits = (qBin, iteration) => {
-    const bits = qBin.length;
-    const signBit = qBin[0];
-    const bitAt = (indexFromLsb) => {
-        if (indexFromLsb < 0) return "0";
-        if (indexFromLsb >= bits) return signBit;
-        return qBin[bits - 1 - indexFromLsb];
-    };
+const getCurrentRadix8WindowBits = (qReg, qEd) => {
+    const paddedQ = qReg.padStart(3, qReg[0] ?? "0");
 
     return {
-        b3: bitAt(iteration * 3 + 2),
-        b2: bitAt(iteration * 3 + 1),
-        b1: bitAt(iteration * 3),
-        b0: bitAt(iteration * 3 - 1),
+        b3: paddedQ[paddedQ.length - 3],
+        b2: paddedQ[paddedQ.length - 2],
+        b1: paddedQ[paddedQ.length - 1],
+        b0: qEd,
     };
 };
 
@@ -113,12 +107,12 @@ const getRadix8Op = (b3, b2, b1, b0) => {
 const generateRadix8Steps = (Q_bin, M_bin, bits) => {
     const steps = [];
     const extBits = bits + 2;
-    const iterations = Math.ceil(bits / 3);
+    const qRegBits = bits + 1;
+    const iterations = Math.ceil(qRegBits / 3);
     const lastDisplayedCount = Math.max(0, iterations - 1);
-    const originalQ = Q_bin;
 
     let A = "0".repeat(extBits);
-    let Q = Q_bin;
+    let Q = `${Q_bin[0]}${Q_bin}`;
     let Q_ED = "0";
 
     const mVal = c2ToInt(M_bin);
@@ -147,9 +141,8 @@ const generateRadix8Steps = (Q_bin, M_bin, bits) => {
     });
 
     for (let i = 0; i < iterations; i++) {
-        const { b3, b2, b1, b0 } = getRadix8WindowBits(originalQ, i);
-
-        const shiftAmount = Math.min(3, bits - i * 3);
+        const { b3, b2, b1, b0 } = getCurrentRadix8WindowBits(Q, Q_ED);
+        const shiftAmount = 3;
         const opInfo = getRadix8Op(b3, b2, b1, b0);
         const evalCtx = {
             b3,
@@ -205,7 +198,7 @@ const generateRadix8Steps = (Q_bin, M_bin, bits) => {
             combined[0].repeat(shiftAmount) + combined.slice(0, combined.length - shiftAmount);
 
         A = shifted.slice(0, extBits);
-        Q = shifted.slice(extBits, extBits + bits);
+        Q = shifted.slice(extBits, extBits + qRegBits);
         Q_ED = shifted.slice(-1);
 
         const isFinal = i === iterations - 1;
@@ -247,7 +240,7 @@ const getRadix8FinalProductBinary = (Q_bin, M_bin, bits) => {
 
     if (!finalStep || finalStep.type !== "state") return null;
 
-    return finalStep.A.substring(2) + finalStep.Q;
+    return (finalStep.A + finalStep.Q).slice(-(2 * bits));
 };
 
 const doesRadix8WidthWork = (qVal, mVal, bits) => {
@@ -372,8 +365,8 @@ export default function Radix8BoothApp() {
             expectedProduct = (qNum / Math.max(1, qDen)) * (mNum / Math.max(1, mDen));
             note =
                 bitWidthMode === "manual"
-                    ? `Radix-8 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
-                    : "Radix-8 fixed-point mode. Width is auto-selected to the minimum working size and extended for +/-4M.";
+                    ? `Radix-8 fixed-point mode. Base width locked to ${bitSize} bits (auto minimum ${autoBitSize}). Q uses ${bitSize + 1} bits and A uses ${extBits} bits.`
+                    : `Radix-8 fixed-point mode. Auto width picks the minimum working base size. Q uses ${bitSize + 1} bits and A uses ${extBits} bits.`;
         } else {
             autoBitSize = chooseRadix8Bits(xInt, yInt);
             bitSize = bitWidthMode === "manual"
@@ -394,14 +387,14 @@ export default function Radix8BoothApp() {
 
             expectedProduct = xInt * yInt;
             note =
-                "Radix-8 auto width picks the minimum working size and leaves room for +/-4M on A.";
+                `Radix-8 auto width picks the minimum working base size. Q uses ${bitSize + 1} bits and A uses ${extBits} bits.`;
         }
 
         if (!isFractional) {
             note =
                 bitWidthMode === "manual"
-                    ? `Radix-8 width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
-                    : "Radix-8 auto width picks the minimum working size and leaves room for +/-4M on A.";
+                    ? `Radix-8 base width locked to ${bitSize} bits (auto minimum ${autoBitSize}). Q uses ${bitSize + 1} bits and A uses ${extBits} bits.`
+                    : `Radix-8 auto width picks the minimum working base size. Q uses ${bitSize + 1} bits and A uses ${extBits} bits.`;
         }
 
         const mVal = c2ToInt(mC2);
@@ -479,7 +472,7 @@ export default function Radix8BoothApp() {
 
     const cycleBlocks = useMemo(() => {
         const blocks = [];
-        const iterations = Math.ceil(bitSize / 3);
+        const iterations = Math.ceil((bitSize + 1) / 3);
 
         for (let i = 0; i < iterations; i++) {
             const startId = i === 0 ? "init" : `shift_${i - 1}`;
@@ -624,6 +617,11 @@ export default function Radix8BoothApp() {
         );
     };
 
+    const renderQRegisterBits = (qBits, highlightTailCount = 0) => {
+        if (!qBits) return null;
+        return renderBits(qBits, true, highlightTailCount);
+    };
+
     const getCurrentEvalCtx = () => {
         const step = steps[currentStepIdx];
         if (step?.evalCtx) return step.evalCtx;
@@ -643,9 +641,10 @@ export default function Radix8BoothApp() {
         const finalStep = steps[steps.length - 1];
         if (finalStep.type !== "state") return null;
 
-        // Drop the two guard bits from A, keep Q whole
-        const productBin = finalStep.A.substring(2) + finalStep.Q;
+        const combined = finalStep.A + finalStep.Q;
+        const productBin = combined.slice(-(2 * bitSize));
         const raw = c2ToInt(productBin);
+        const guardBits = combined.slice(0, combined.length - productBin.length);
 
         const base = {
             binary: productBin,
@@ -653,7 +652,8 @@ export default function Radix8BoothApp() {
             A: finalStep.A,
             Q: finalStep.Q,
             Q_ED: finalStep.Q_ED,
-            display: `${finalStep.A.substring(2)}.${finalStep.Q}`,
+            display: guardBits ? `${guardBits}.${productBin}` : productBin,
+            guardBits,
         };
 
         if (mode === "fractional") {
@@ -754,19 +754,19 @@ export default function Radix8BoothApp() {
         ["1111", "0"],
     ];
 
-    const radix8Pseudo = `1. Choose the minimum safe width N.
+const radix8Pseudo = `1. Choose the minimum safe base width N.
 2. Convert operands to C2 on N bits.
 3. Init:
    A = 0...(N+2 bits)
-   Q = multiplier (N bits)
+   Q = sign-extended multiplier (N+1 bits)
    Q[-1] = 0
 
 4. Precompute on N+2 bits:
    M, -M, 2M, -2M, 3M, -3M, 4M, -4M
 
-5. Repeat ceil(N/3) times:
-   recode the next radix-8 group from the original multiplier bits
-   using sign extension at the top and Q[-1] = 0 at the bottom
+5. Repeat ceil((N+1)/3) times:
+   inspect the current radix-8 window:
+   Q[2], Q[1], Q[0], Q[-1]
 
    0000 or 1111 -> 0
    0001 or 0010 -> +M
@@ -785,7 +785,7 @@ export default function Radix8BoothApp() {
    [ A | Q | Q[-1] ]
 
 6. Final product:
-   P = A[N-1:0] Â· Q[N-1:0]`;
+   P = lower 2N bits of [A | Q]`;
 
     return (
         <div className="booth-page min-h-screen">
@@ -859,7 +859,7 @@ export default function Radix8BoothApp() {
                             <div className="space-y-3">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        Register Width
+                                        Base Width
                                     </label>
                                     <div className="flex gap-2">
                                         <button
@@ -905,7 +905,7 @@ export default function Radix8BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Register Width
+                                            Base Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {bitSize} bits
@@ -914,7 +914,7 @@ export default function Radix8BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            A / M Variant Width
+                                            A Register Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {extBits} bits
@@ -982,7 +982,7 @@ export default function Radix8BoothApp() {
                             <div className="space-y-3">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        Register Width
+                                        Base Width
                                     </label>
                                     <div className="flex gap-2">
                                         <button
@@ -1037,7 +1037,7 @@ export default function Radix8BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Register Width
+                                            Base Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {bitSize} bits
@@ -1046,7 +1046,7 @@ export default function Radix8BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            A / M Variant Width
+                                            A Register Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {extBits} bits
@@ -1148,7 +1148,7 @@ export default function Radix8BoothApp() {
                                 </div>
 
                                 <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    A[{bitSize - 1}:0].Q[{bitSize - 1}:0]
+                                    lower {2 * bitSize} bits of [A | Q]
                                 </div>
 
                                 <div className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -1350,7 +1350,7 @@ export default function Radix8BoothApp() {
                                 <div>
                                     <span className="font-semibold">Result:</span>
                                     <code className="ml-2 rounded bg-white/80 px-2 py-0.5 dark:bg-slate-950/50 dark:text-slate-100">
-                                        A[{bitSize - 1}:0].Q[{bitSize - 1}:0]
+                                        lower {2 * bitSize} bits of [A | Q]
                                     </code>
                                 </div>
                             </div>
@@ -1377,7 +1377,7 @@ export default function Radix8BoothApp() {
                                             A ({extBits})
                                         </th>
                                         <th className="py-3 px-4 text-center font-semibold border-r border-slate-200 dark:border-slate-700">
-                                            Q ({bitSize})
+                                            Q ({bitSize + 1})
                                         </th>
                                         <th className="py-3 px-3 text-center font-semibold border-r border-slate-200 dark:border-slate-700">
                                             Q[-1]
@@ -1398,10 +1398,10 @@ export default function Radix8BoothApp() {
                                         return (
                                             <tr
                                                 key={block.id}
-                                                className={`border-b align-top transition-colors ${isFinalBlock
-                                                    ? "table-band-rose border-2 border-red-400 dark:border-red-500/70"
-                                                    : block.isActive
+                                                className={`border-b align-top transition-colors ${block.isActive
                                                         ? "table-band-amber"
+                                                        : isFinalBlock
+                                                            ? "bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/10 dark:border-emerald-800/50"
                                                         : "table-band-slate border-slate-100 dark:border-slate-800"
                                                     }`}
                                             >
@@ -1450,7 +1450,7 @@ export default function Radix8BoothApp() {
                                                                 {renderBits(
                                                                     block.shiftState.A,
                                                                     true,
-                                                                    block.shiftState.isFinal ? bitSize : 0
+                                                                    block.shiftState.isFinal ? Math.max(0, bitSize - 1) : 0
                                                                 )}
                                                             </div>
                                                         )}
@@ -1460,7 +1460,7 @@ export default function Radix8BoothApp() {
                                                 <td className="py-4 px-4 border-r border-slate-200 dark:border-slate-700">
                                                     <div className="grid gap-y-2">
                                                         <div className="min-h-[24px] flex justify-center">
-                                                            {renderBits(block.startState.Q, true, showEvalHighlight ? 3 : 0)}
+                                                            {renderQRegisterBits(block.startState.Q, showEvalHighlight ? 3 : 0)}
                                                         </div>
 
                                                         {reserveOpRow && <div className="min-h-[30px]" />}
@@ -1474,10 +1474,9 @@ export default function Radix8BoothApp() {
                                                                     : "text-sky-700 dark:text-sky-300"
                                                                     }`}
                                                             >
-                                                                {renderBits(
+                                                                {renderQRegisterBits(
                                                                     block.shiftState.Q,
-                                                                    true,
-                                                                    block.shiftState.isFinal ? bitSize : 0
+                                                                    block.shiftState.isFinal ? bitSize + 1 : 0
                                                                 )}
                                                             </div>
                                                         )}
@@ -1551,8 +1550,8 @@ export default function Radix8BoothApp() {
                                                         )}
 
                                                         {isFinalBlock && (
-                                                            <div className="font-semibold table-text-rose">
-                                                                Final AQ
+                                                            <div className="font-semibold text-emerald-700 dark:text-emerald-300">
+                                                                Result slice
                                                             </div>
                                                         )}
                                                     </div>
@@ -1566,7 +1565,7 @@ export default function Radix8BoothApp() {
                                                     key={step.id}
                                                     className={`
                             border-b transition-colors
-                            ${step.isFinal ? "table-band-rose border-2 border-red-400 dark:border-red-500/70" : ""}
+                            ${step.isFinal ? "bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/10 dark:border-emerald-800/50" : ""}
                             ${step.isMathResult ? "table-band-sky" : ""}
                             ${isActive && !step.isFinal ? "table-band-amber" : ""}
                             ${!step.isMathResult && !step.isFinal && !step.isInit
@@ -1583,13 +1582,13 @@ export default function Radix8BoothApp() {
 
                                                     <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700">
                                                         <div className="flex justify-center">
-                                                            {renderBits(step.A, true)}
+                                                            {renderBits(step.A, true, step.isFinal ? Math.max(0, bitSize - 1) : 0)}
                                                         </div>
                                                     </td>
 
                                                     <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700">
                                                         <div className="flex justify-center">
-                                                            {renderBits(step.Q, true, showEvalHighlight ? 3 : 0)}
+                                                            {renderQRegisterBits(step.Q, step.isFinal ? bitSize + 1 : showEvalHighlight ? 3 : 0)}
                                                         </div>
                                                     </td>
 
@@ -1605,7 +1604,7 @@ export default function Radix8BoothApp() {
                                                     <td className="py-2 px-4 text-center text-slate-500 dark:text-slate-400">
                                                         {step.isInit && renderBits(mExt, true)}
                                                         {step.isMathResult && <span className="font-semibold text-slate-800 dark:text-slate-100">A after op</span>}
-                                                        {step.isFinal && <span className="font-semibold table-text-rose">Final</span>}
+                                                        {step.isFinal && <span className="font-semibold text-emerald-700 dark:text-emerald-300">Result slice</span>}
                                                         {!step.isInit && !step.isMathResult && !step.isFinal && (
                                                             <span className="font-mono text-[11px] text-violet-600 dark:text-violet-400 whitespace-nowrap font-bold">
                                                                 ARS by 3 {"->"}
@@ -1814,11 +1813,11 @@ export default function Radix8BoothApp() {
 
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        New Q ({bitSize})
+                                        New Q ({bitSize + 1})
                                     </label>
                                     <input
                                         type="text"
-                                        maxLength={bitSize}
+                                        maxLength={bitSize + 1}
                                         value={userInputs.Q}
                                         onChange={(e) =>
                                             setUserInputs({

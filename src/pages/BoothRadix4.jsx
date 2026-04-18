@@ -344,8 +344,8 @@ export default function Radix4BoothApp() {
             expectedProduct = (qNum / Math.max(1, qDen)) * (mNum / Math.max(1, mDen));
             note =
                 bitWidthMode === "manual"
-                    ? `Radix-4 fixed-point mode. Width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
-                    : `Radix-4 fixed-point mode. Width = ${bitSize} bits (minimum working width).`;
+                    ? `Radix-4 fixed-point mode. Base width locked to ${bitSize} bits (auto minimum ${autoBitSize}). Q uses ${bitSize} bits and A uses ${extBits} bits.`
+                    : `Radix-4 fixed-point mode. Auto width picks the minimum working base size. Q uses ${bitSize} bits and A uses ${extBits} bits.`;
         } else {
             autoBitSize = chooseRadix4Bits(xInt, yInt);
             bitSize = bitWidthMode === "manual"
@@ -366,14 +366,14 @@ export default function Radix4BoothApp() {
 
             expectedProduct = xInt * yInt;
             note =
-                "Radix-4 auto width picks the minimum working size and leaves room for +/-2M on A.";
+                `Radix-4 auto width picks the minimum working base size. Q uses ${bitSize} bits and A uses ${extBits} bits.`;
         }
 
         if (!isFractional) {
             note =
                 bitWidthMode === "manual"
-                    ? `Radix-4 width locked to ${bitSize} bits (auto minimum ${autoBitSize}).`
-                    : "Radix-4 auto width picks the minimum working size and leaves room for +/-2M on A.";
+                    ? `Radix-4 base width locked to ${bitSize} bits (auto minimum ${autoBitSize}). Q uses ${bitSize} bits and A uses ${extBits} bits.`
+                    : `Radix-4 auto width picks the minimum working base size. Q uses ${bitSize} bits and A uses ${extBits} bits.`;
         }
 
         const mVal = c2ToInt(mC2);
@@ -565,19 +565,26 @@ export default function Radix4BoothApp() {
         }
     };
 
-    const renderBits = (bitStr, highlightMsb = false, underlineLastTwo = false) => {
+    const renderBits = (
+        bitStr,
+        highlightMsb = false,
+        highlightTailCount = 0,
+        highlightHeadCount = 0
+    ) => {
         if (!bitStr) return null;
 
         return (
             <span className="font-mono tracking-wider">
                 {bitStr.split("").map((b, i) => {
-                    const isLastTwo = i >= bitStr.length - 2;
+                    const isHighlightedTail = highlightTailCount > 0 && i >= bitStr.length - highlightTailCount;
+                    const isHighlightedHead = highlightHeadCount > 0 && i < highlightHeadCount;
 
                     return (
                         <span
                             key={`${bitStr}-${i}`}
                             className={`inline-block w-4 text-center ${i === 0 && highlightMsb ? "text-slate-700 dark:text-slate-200 font-bold" : ""
-                                } ${underlineLastTwo && isLastTwo ? "border-b-2 border-red-400 font-semibold" : ""
+                                } ${isHighlightedTail ? "border-b-2 border-red-400 font-semibold" : ""
+                                } ${isHighlightedHead ? "rounded-full border border-fuchsia-400 text-fuchsia-700 dark:text-fuchsia-300 font-semibold" : ""
                                 }`}
                         >
                             {b}
@@ -630,7 +637,6 @@ export default function Radix4BoothApp() {
         const finalStep = steps[steps.length - 1];
         if (finalStep.type !== "state") return null;
 
-        // Drop A extra bit, keep Q whole
         const productBin = finalStep.A.substring(1) + finalStep.Q;
         const raw = c2ToInt(productBin);
 
@@ -733,7 +739,7 @@ export default function Radix4BoothApp() {
         ["111", "0"],
     ];
 
-    const radix4Pseudo = `1. Choose the minimum safe width N.
+    const radix4Pseudo = `1. Choose the minimum safe base width N.
 2. Convert operands to C2 on N bits.
 3. Init:
    A = 0...(N+1 bits)
@@ -835,7 +841,7 @@ export default function Radix4BoothApp() {
                             <div className="space-y-3">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        Register Width
+                                        Base Width
                                     </label>
                                     <div className="flex gap-2">
                                         <button
@@ -881,7 +887,7 @@ export default function Radix4BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Register Width
+                                            Base Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {bitSize} bits
@@ -890,7 +896,7 @@ export default function Radix4BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            A / M Variant Width
+                                            A Register Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {extBits} bits
@@ -958,7 +964,7 @@ export default function Radix4BoothApp() {
                             <div className="space-y-3">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        Register Width
+                                        Base Width
                                     </label>
                                     <div className="flex gap-2">
                                         <button
@@ -1013,7 +1019,7 @@ export default function Radix4BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            Register Width
+                                            Base Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {bitSize} bits
@@ -1022,7 +1028,7 @@ export default function Radix4BoothApp() {
 
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                            A / M Variant Width
+                                            A Register Width
                                         </label>
                                         <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-300">
                                             {extBits} bits
@@ -1352,10 +1358,10 @@ export default function Radix4BoothApp() {
                                         return (
                                             <tr
                                                 key={block.id}
-                                                className={`border-b align-top transition-colors ${isFinalBlock
-                                                    ? "table-band-rose border-2 border-red-400 dark:border-red-500/70"
-                                                    : block.isActive
+                                                className={`border-b align-top transition-colors ${block.isActive
                                                         ? "table-band-amber"
+                                                        : isFinalBlock
+                                                            ? "bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/10 dark:border-emerald-800/50"
                                                         : "table-band-slate border-slate-100 dark:border-slate-800"
                                                     }`}
                                             >
@@ -1397,11 +1403,16 @@ export default function Radix4BoothApp() {
                                                         {block.showShift && block.shiftState && (
                                                             <div
                                                                 className={`min-h-[24px] flex justify-center ${block.shiftState.isFinal
-                                                                    ? "table-text-rose"
+                                                                    ? "text-slate-800 dark:text-slate-100"
                                                                     : "text-sky-700 dark:text-sky-300"
                                                                     }`}
                                                             >
-                                                                {renderBits(block.shiftState.A, true)}
+                                                                {renderBits(
+                                                                    block.shiftState.A,
+                                                                    true,
+                                                                    block.shiftState.isFinal ? bitSize : 0,
+                                                                    block.shiftState.isFinal ? 0 : block.shiftState.shiftAmount
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1420,11 +1431,15 @@ export default function Radix4BoothApp() {
                                                         {block.showShift && block.shiftState && (
                                                             <div
                                                                 className={`min-h-[24px] flex justify-center ${block.shiftState.isFinal
-                                                                    ? "table-text-rose"
+                                                                    ? "text-slate-800 dark:text-slate-100"
                                                                     : "text-sky-700 dark:text-sky-300"
                                                                     }`}
                                                             >
-                                                                {renderBits(block.shiftState.Q, true)}
+                                                                {renderBits(
+                                                                    block.shiftState.Q,
+                                                                    true,
+                                                                    block.shiftState.isFinal ? bitSize : 0
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1447,7 +1462,7 @@ export default function Radix4BoothApp() {
                                                         {block.showShift && block.shiftState && (
                                                             <div
                                                                 className={`min-h-[24px] flex items-center justify-center ${block.shiftState.isFinal
-                                                                    ? "table-text-rose"
+                                                                    ? "text-slate-500 dark:text-slate-400"
                                                                     : "text-sky-700 dark:text-sky-300"}`}
                                                             >
                                                                 {block.shiftState.Q_ED}
@@ -1497,8 +1512,8 @@ export default function Radix4BoothApp() {
                                                         )}
 
                                                         {isFinalBlock && (
-                                                            <div className="font-semibold table-text-rose">
-                                                                Final AQ
+                                                            <div className="font-semibold text-emerald-700 dark:text-emerald-300">
+                                                                Result slice
                                                             </div>
                                                         )}
                                                     </div>
@@ -1512,7 +1527,7 @@ export default function Radix4BoothApp() {
                                                     key={step.id}
                                                     className={`
                             border-b transition-colors
-                            ${step.isFinal ? "table-band-rose border-2 border-red-400 dark:border-red-500/70" : ""}
+                            ${step.isFinal ? "bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/10 dark:border-emerald-800/50" : ""}
                             ${step.isMathResult ? "table-band-sky" : ""}
                             ${isActive && !step.isFinal ? "table-band-amber" : ""}
                             ${!step.isMathResult && !step.isFinal && !step.isInit
@@ -1529,13 +1544,18 @@ export default function Radix4BoothApp() {
 
                                                     <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700">
                                                         <div className="flex justify-center">
-                                                            {renderBits(step.A, true)}
+                                                            {renderBits(
+                                                                step.A,
+                                                                true,
+                                                                step.isFinal ? bitSize : 0,
+                                                                !step.isInit && !step.isMathResult && !step.isFinal ? step.shiftAmount : 0
+                                                            )}
                                                         </div>
                                                     </td>
 
                                                     <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-700">
                                                         <div className="flex justify-center">
-                                                            {renderBits(step.Q, true, showEvalHighlight)}
+                                                            {renderBits(step.Q, true, step.isFinal ? bitSize : showEvalHighlight ? 2 : 0)}
                                                         </div>
                                                     </td>
 
@@ -1551,7 +1571,7 @@ export default function Radix4BoothApp() {
                                                     <td className="py-2 px-4 text-center text-slate-500 dark:text-slate-400">
                                                         {step.isInit && renderBits(mExt, true)}
                                                         {step.isMathResult && <span className="font-semibold text-slate-800 dark:text-slate-100">A after op</span>}
-                                                        {step.isFinal && <span className="font-semibold table-text-rose">Final</span>}
+                                                        {step.isFinal && <span className="font-semibold text-emerald-700 dark:text-emerald-300">Result slice</span>}
                                                         {!step.isInit && !step.isMathResult && !step.isFinal && (
                                                             <span className="font-mono text-[11px] text-violet-600 dark:text-violet-400 whitespace-nowrap font-bold">
                                                                 ARS by {step.shiftAmount} {"->"}
