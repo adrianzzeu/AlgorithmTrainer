@@ -139,6 +139,20 @@ const getLineToneClass = (tone) => {
 const renderRegisterLines = (lines) => (
   <div className="grid gap-y-2">
     {lines.map((line, index) => {
+      if (line.kind === 'bitsWithNote') {
+        return (
+          <div
+            key={`${line.bits}-${line.note}-${index}`}
+            className={`min-h-[24px] flex flex-col items-center justify-center gap-1 ${getLineToneClass(line.tone)}`}
+          >
+            <div>{renderBits(line.bits, line.highlightTail ?? 0)}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+              {line.note}
+            </div>
+          </div>
+        );
+      }
+
       if (line.kind === 'operand') {
         return (
           <div
@@ -150,6 +164,11 @@ const renderRegisterLines = (lines) => (
               <div className="border-b-2 border-slate-400 pb-1 dark:border-slate-500">
                 {renderBits(line.bits)}
               </div>
+              {line.note && (
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                  {line.note}
+                </span>
+              )}
             </div>
           </div>
         );
@@ -284,7 +303,7 @@ const generateSrtData = (dividend, divisor, bits) => {
         operandBits = negNormalizedBWide;
         finalP = addBinaryStr(shiftedP, operandBits).result;
         caseLabel = 'Case (c)';
-        caseRule = 'Top three bits are 001, 010, or 011, so q_i = 1 and we subtract B after the shift.';
+        caseRule = 'Top three bits are 001, 010, or 011, so q_i = 1 and we add -B in two\'s complement after the shift.';
       }
     }
 
@@ -304,6 +323,8 @@ const generateSrtData = (dividend, divisor, bits) => {
       shiftedA,
       opLabel,
       operandBits,
+      operandPrefix: operandBits ? '+' : '',
+      operandName: qDigit === 1 ? '-B (C2)' : qDigit === -1 ? 'B' : '',
       finalP,
       finalA: shiftedA,
       quotientDigits: [...qDigits],
@@ -336,6 +357,7 @@ const generateSrtData = (dividend, divisor, bits) => {
     normalizedA,
     normalizedB,
     normalizedBWide,
+    negNormalizedBWide,
     blocks,
     qDigits,
     redundantQuotient,
@@ -505,8 +527,19 @@ export default function SRTDivision() {
                       <span className="font-semibold">{srtData.leadingZeros}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">
-                      <span>B after normalization</span>
+                      <span>B after normalization (unsigned)</span>
                       <span className="font-mono">{srtData.normalizedB}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span>B for P-add (0-extended)</span>
+                      <span className="font-mono">{srtData.normalizedBWide}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span>-B (C2, P width)</span>
+                      <span className="font-mono">{srtData.negNormalizedBWide}</span>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      Subtraction is performed as <span className="font-mono">P + (-B)</span>.
                     </div>
                   </div>
                 </div>
@@ -524,7 +557,7 @@ export default function SRTDivision() {
                     <span className="font-mono">100 / 101 / 110</span> =&gt; <span className="font-semibold">q_i = -1</span>, shift then add B
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2 dark:border-slate-700 dark:bg-slate-950/50">
-                    <span className="font-mono">001 / 010 / 011</span> =&gt; <span className="font-semibold">q_i = 1</span>, shift then subtract B
+                    <span className="font-mono">001 / 010 / 011</span> =&gt; <span className="font-semibold">q_i = 1</span>, shift then add <span className="font-mono">-B</span> (C2)
                   </div>
                 </div>
               </div>
@@ -620,11 +653,21 @@ export default function SRTDivision() {
 
                         if (block.iteration === 0) {
                           pLines.push({ kind: 'bits', bits: srtData.initialP, tone: 'base' });
-                          bLines.push({ kind: 'bits', bits: srtData.initialB, tone: 'base' });
+                          bLines.push({
+                            kind: 'bitsWithNote',
+                            bits: srtData.initialB,
+                            tone: 'base',
+                            note: 'B start',
+                          });
 
                           if (srtData.leadingZeros > 0) {
                             pLines.push({ kind: 'bits', bits: srtData.normalizedP, tone: 'muted' });
-                            bLines.push({ kind: 'bits', bits: srtData.normalizedB, tone: 'muted' });
+                            bLines.push({
+                              kind: 'bitsWithNote',
+                              bits: srtData.normalizedB,
+                              tone: 'muted',
+                              note: 'B << k (unsigned)',
+                            });
                           }
                         } else {
                           pLines.push({ kind: 'bits', bits: block.startP, tone: 'base' });
@@ -636,7 +679,8 @@ export default function SRTDivision() {
                           pLines.push({
                             kind: 'operand',
                             bits: block.operandBits,
-                            prefix: block.opLabel === '+B' ? '+' : '-',
+                            prefix: block.operandPrefix,
+                            note: block.operandName,
                           });
                           pLines.push({ kind: 'bits', bits: block.finalP, tone: 'result' });
                         }
@@ -720,7 +764,7 @@ export default function SRTDivision() {
                             {renderRegisterLines([
                               { kind: 'bits', bits: srtData.finalP, tone: 'base' },
                               ...(srtData.finalNegative
-                                ? [{ kind: 'operand', bits: srtData.normalizedBWide, prefix: '+' }]
+                                ? [{ kind: 'operand', bits: srtData.normalizedBWide, prefix: '+', note: 'B' }]
                                 : []),
                               { kind: 'bits', bits: srtData.correctedP, tone: 'result' },
                               {
