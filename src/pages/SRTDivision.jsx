@@ -178,6 +178,53 @@ const renderRegisterLines = (lines) => (
   </div>
 );
 
+const buildADisplayTokens = (bitStr, quotientDigits) => {
+  const baseTokens = bitStr.split('').map((bit) => ({ label: bit, tone: 'base' }));
+  const digitCount = quotientDigits.length;
+
+  if (digitCount <= 0) return baseTokens;
+
+  const startIndex = Math.max(0, bitStr.length - digitCount);
+
+  quotientDigits.forEach((digit, index) => {
+    const tokenIndex = startIndex + index;
+    if (tokenIndex < 0 || tokenIndex >= baseTokens.length) return;
+
+    baseTokens[tokenIndex] = {
+      label: formatQi(digit),
+      tone: digit === -1 ? 'negative' : 'quotient',
+    };
+  });
+
+  return baseTokens;
+};
+
+const getAToneClass = (tone) => {
+  if (tone === 'muted') return 'text-slate-500 dark:text-slate-400';
+  if (tone === 'shift') return 'text-sky-700 dark:text-sky-300';
+  if (tone === 'result') return 'text-emerald-700 dark:text-emerald-300';
+  return 'text-slate-800 dark:text-slate-100';
+};
+
+const renderATokens = (tokens, defaultTone = 'base') => (
+  <div className="flex flex-wrap justify-center gap-x-1 gap-y-1">
+    {tokens.map((token, index) => (
+      <span
+        key={`${token.label}-${index}`}
+        className={`inline-flex min-h-[1.6rem] min-w-[1.6rem] items-center justify-center rounded-md px-1 text-[11px] font-semibold ${
+          token.tone === 'negative'
+            ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200'
+            : token.tone === 'quotient'
+              ? 'text-fuchsia-600 dark:text-fuchsia-300'
+              : getAToneClass(defaultTone)
+        }`}
+      >
+        {token.label}
+      </span>
+    ))}
+  </div>
+);
+
 const generateSrtData = (dividend, divisor, bits) => {
   if (divisor <= 0) return null;
 
@@ -565,31 +612,25 @@ export default function SRTDivision() {
                       {visibleBlocks.map((block, index) => {
                         const isActive = index === clampedBlockIdx;
                         const pLines = [];
-                        const aLines = [];
                         const bLines = [];
+                        const priorQDigits = block.quotientDigits.slice(0, -1);
+                        const startATokens = buildADisplayTokens(block.startA, priorQDigits);
+                        const shiftedATokens = buildADisplayTokens(block.shiftedA, block.quotientDigits);
+                        const aHasOp = Boolean(block.operandBits);
 
                         if (block.iteration === 0) {
                           pLines.push({ kind: 'bits', bits: srtData.initialP, tone: 'base' });
-                          aLines.push({ kind: 'bits', bits: srtData.initialA, tone: 'base' });
                           bLines.push({ kind: 'bits', bits: srtData.initialB, tone: 'base' });
 
                           if (srtData.leadingZeros > 0) {
                             pLines.push({ kind: 'bits', bits: srtData.normalizedP, tone: 'muted' });
-                            aLines.push({ kind: 'bits', bits: srtData.normalizedA, tone: 'muted' });
                             bLines.push({ kind: 'bits', bits: srtData.normalizedB, tone: 'muted' });
                           }
                         } else {
                           pLines.push({ kind: 'bits', bits: block.startP, tone: 'base' });
-                          aLines.push({ kind: 'bits', bits: block.startA, tone: 'base' });
                         }
 
                         pLines.push({ kind: 'bits', bits: block.shiftedP, tone: 'shift' });
-                        aLines.push({
-                          kind: 'bits',
-                          bits: block.shiftedA,
-                          tone: 'shift',
-                          highlightTail: block.quotientDigits.length,
-                        });
 
                         if (block.operandBits) {
                           pLines.push({
@@ -614,7 +655,35 @@ export default function SRTDivision() {
                             </td>
 
                             <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
-                              {renderRegisterLines(aLines)}
+                              <div className="grid gap-y-2">
+                                {block.iteration === 0 ? (
+                                  <>
+                                    <div className="min-h-[24px] flex items-center justify-center">
+                                      {renderATokens(
+                                        buildADisplayTokens(srtData.initialA, []),
+                                        'base'
+                                      )}
+                                    </div>
+                                    {srtData.leadingZeros > 0 && (
+                                      <div className="min-h-[24px] flex items-center justify-center">
+                                        {renderATokens(
+                                          buildADisplayTokens(srtData.normalizedA, []),
+                                          'muted'
+                                        )}
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="min-h-[24px] flex items-center justify-center">
+                                    {renderATokens(startATokens, 'base')}
+                                  </div>
+                                )}
+                                <div className="min-h-[24px] flex items-center justify-center">
+                                  {renderATokens(shiftedATokens, 'shift')}
+                                </div>
+                                {aHasOp && <div className="min-h-[30px]" />}
+                                {aHasOp && <div className="min-h-[24px]" />}
+                              </div>
                             </td>
 
                             <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
@@ -624,9 +693,16 @@ export default function SRTDivision() {
                                   <div className="min-h-[24px] flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                                     k = {srtData.leadingZeros}
                                   </div>
+                                  {aHasOp && <div className="min-h-[30px]" />}
+                                  {aHasOp && <div className="min-h-[24px]" />}
                                 </div>
                               ) : (
-                                <div className="min-h-[120px]" />
+                                <div className="grid gap-y-2">
+                                  <div className="min-h-[24px]" />
+                                  <div className="min-h-[24px]" />
+                                  {aHasOp && <div className="min-h-[30px]" />}
+                                  {aHasOp && <div className="min-h-[24px]" />}
+                                </div>
                               )}
                             </td>
 
@@ -643,23 +719,49 @@ export default function SRTDivision() {
                           <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
                             {renderRegisterLines([
                               { kind: 'bits', bits: srtData.finalP, tone: 'base' },
+                              ...(srtData.finalNegative
+                                ? [{ kind: 'operand', bits: srtData.normalizedBWide, prefix: '+' }]
+                                : []),
                               { kind: 'bits', bits: srtData.correctedP, tone: 'result' },
+                              {
+                                kind: 'label',
+                                text:
+                                  srtData.leadingZeros > 0
+                                    ? `R = ${srtData.remainderBinary} (${srtData.remainder})`
+                                    : `R = ${srtData.remainderBinary}`,
+                                tone: 'result',
+                              },
                             ])}
                           </td>
                           <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
                             <div className="space-y-2 text-center text-sm text-slate-700 dark:text-slate-300">
-                              <div className="font-mono">{quotientTermText}</div>
-                              {srtData.finalNegative && (
-                                <div className="font-mono">{quotientTermText} - 1</div>
-                              )}
+                              <div>{renderATokens(buildADisplayTokens('0'.repeat(bitSize), srtData.qDigits), 'base')}</div>
+                              {srtData.finalNegative && <div className="font-mono">{quotientTermText} - 1</div>}
+                              <div className="font-mono text-slate-500 dark:text-slate-400">
+                                Q = {srtData.quotientBinary}
+                              </div>
                               <div className="font-semibold text-fuchsia-700 dark:text-fuchsia-300">
                                 q = {srtData.correctedQuotient}
                               </div>
                             </div>
                           </td>
                           <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
-                            <div className="min-h-[72px] flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
-                              {srtData.finalNegative ? '+ B' : 'Done'}
+                            <div className="grid gap-y-2">
+                              {srtData.finalNegative ? (
+                                <>
+                                  <div className="min-h-[24px] flex items-center justify-center text-slate-500 dark:text-slate-400">
+                                    {renderBits(srtData.normalizedB)}
+                                  </div>
+                                  <div className="min-h-[30px] flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                                    + B
+                                  </div>
+                                  <div className="min-h-[24px]" />
+                                </>
+                              ) : (
+                                <div className="min-h-[72px] flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                                  Done
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-4 text-center text-sm font-semibold text-fuchsia-700 dark:text-fuchsia-300">
