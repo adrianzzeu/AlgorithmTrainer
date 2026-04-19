@@ -64,6 +64,15 @@ const ROUTE_META = {
     description: 'Unsigned SRT-2 division with normalization and correction.',
     badge: 'Algorithm Lab',
   },
+  SRT4Division: {
+    order: 7,
+    path: '/srt4division',
+    name: 'SRT-4 Division',
+    navName: 'SRT-4',
+    group: 'algorithm',
+    description: 'Unsigned SRT-4 division with top6(P) and top4(B) selection.',
+    badge: 'Algorithm Lab',
+  },
 };
 
 function formatName(name) {
