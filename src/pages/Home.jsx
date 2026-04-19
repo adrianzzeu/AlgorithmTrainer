@@ -9,6 +9,7 @@ const ICONS = {
   BoothRadix3: Binary,
   BoothRadix4: Cpu,
   BoothRadix8: Cpu,
+  SRTDivision: Cpu,
 };
 
 export default function Home() {

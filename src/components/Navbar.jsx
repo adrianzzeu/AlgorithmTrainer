@@ -11,6 +11,7 @@ const ROUTE_ICONS = {
   BoothRadix3: Cpu,
   BoothRadix4: Cpu,
   BoothRadix8: Cpu,
+  SRTDivision: Cpu,
 };
 
 export default function Navbar() {

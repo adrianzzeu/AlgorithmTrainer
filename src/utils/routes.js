@@ -55,6 +55,15 @@ const ROUTE_META = {
     description: 'Radix-8 Booth with shifts by 3.',
     badge: 'Algorithm Lab',
   },
+  SRTDivision: {
+    order: 6,
+    path: '/srtdivision',
+    name: 'SRT-2 Division',
+    navName: 'SRT-2',
+    group: 'algorithm',
+    description: 'Unsigned SRT-2 division with normalization and correction.',
+    badge: 'Algorithm Lab',
+  },
 };
 
 function formatName(name) {

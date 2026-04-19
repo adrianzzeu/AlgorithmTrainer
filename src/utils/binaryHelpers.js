@@ -39,6 +39,15 @@ export const requiredBitsForSignedInt = (num) => {
   return bits;
 };
 
+export const requiredBitsForUnsignedInt = (num) => {
+  const safeNum = Math.max(0, num);
+  let bits = 1;
+  while (safeNum > 2 ** bits - 1) {
+    bits++;
+  }
+  return bits;
+};
+
 export const intToC2 = (num, bits) => {
   if (num >= 0) {
     return num.toString(2).padStart(bits, "0");
