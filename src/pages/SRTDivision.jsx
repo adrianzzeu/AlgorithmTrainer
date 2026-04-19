@@ -107,7 +107,7 @@ const renderQiDigits = (digits, totalBits) => {
 
   return padded.map((digit, index) => {
     const isKnown = digit != null;
-    const label = !isKnown ? '·' : formatQi(digit);
+    const label = !isKnown ? '.' : formatQi(digit);
     const isNegativeDigit = digit === -1;
 
     return (
@@ -128,6 +128,55 @@ const renderQiDigits = (digits, totalBits) => {
     );
   });
 };
+
+const getLineToneClass = (tone) => {
+  if (tone === 'muted') return 'text-slate-500 dark:text-slate-400';
+  if (tone === 'shift') return 'text-sky-700 dark:text-sky-300';
+  if (tone === 'result') return 'font-semibold text-emerald-700 dark:text-emerald-300';
+  return 'text-slate-800 dark:text-slate-100';
+};
+
+const renderRegisterLines = (lines) => (
+  <div className="grid gap-y-2">
+    {lines.map((line, index) => {
+      if (line.kind === 'operand') {
+        return (
+          <div
+            key={`${line.prefix}-${line.bits}-${index}`}
+            className="min-h-[30px] flex items-center justify-center text-slate-500 dark:text-slate-400"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-8 text-right text-[15px] font-bold">{line.prefix}</span>
+              <div className="border-b-2 border-slate-400 pb-1 dark:border-slate-500">
+                {renderBits(line.bits)}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (line.kind === 'label') {
+        return (
+          <div
+            key={`${line.text}-${index}`}
+            className={`min-h-[24px] flex items-center justify-center text-xs font-semibold uppercase tracking-[0.22em] ${getLineToneClass(line.tone)}`}
+          >
+            {line.text}
+          </div>
+        );
+      }
+
+      return (
+        <div
+          key={`${line.bits}-${index}`}
+          className={`min-h-[24px] flex items-center justify-center ${getLineToneClass(line.tone)}`}
+        >
+          {renderBits(line.bits, line.highlightTail ?? 0)}
+        </div>
+      );
+    })}
+  </div>
+);
 
 const generateSrtData = (dividend, divisor, bits) => {
   if (divisor <= 0) return null;
@@ -496,71 +545,60 @@ export default function SRTDivision() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="surface-card rounded-[1.35rem] p-4">
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                      Before normalization
-                    </div>
-                    <div className="grid gap-2 font-mono text-sm text-slate-700 dark:text-slate-200">
-                      <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
-                        <span>P</span>
-                        <span>{srtData.initialP}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
-                        <span>A</span>
-                        <span>{srtData.initialA}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
-                        <span>B</span>
-                        <span>{srtData.initialB}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="surface-card rounded-[1.35rem] p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                      <span>After normalization</span>
-                      <span>k = {srtData.leadingZeros}</span>
-                    </div>
-                    <div className="grid gap-2 font-mono text-sm text-slate-700 dark:text-slate-200">
-                      <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
-                        <span>P</span>
-                        <span>{srtData.normalizedP}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
-                        <span>A</span>
-                        <span>{srtData.normalizedA}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-950/50">
-                        <span>B</span>
-                        <span>{srtData.normalizedB}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="step-table-surface mt-4 overflow-hidden rounded-[1.5rem]">
                   <table className="w-full border-collapse font-mono text-sm">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50/90 text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
                         <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold dark:border-slate-700">
-                          COUNT
-                        </th>
-                        <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold dark:border-slate-700">
                           P
                         </th>
                         <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold dark:border-slate-700">
-                          A / q digits
+                          A
                         </th>
                         <th className="border-r border-slate-200 px-4 py-3 text-center font-semibold dark:border-slate-700">
-                          q_i
+                          B
                         </th>
-                        <th className="px-4 py-3 text-center font-semibold">Decision</th>
+                        <th className="px-4 py-3 text-center font-semibold">COUNT</th>
                       </tr>
                     </thead>
                     <tbody className="text-base text-slate-800 dark:text-slate-100">
                       {visibleBlocks.map((block, index) => {
                         const isActive = index === clampedBlockIdx;
+                        const pLines = [];
+                        const aLines = [];
+                        const bLines = [];
+
+                        if (block.iteration === 0) {
+                          pLines.push({ kind: 'bits', bits: srtData.initialP, tone: 'base' });
+                          aLines.push({ kind: 'bits', bits: srtData.initialA, tone: 'base' });
+                          bLines.push({ kind: 'bits', bits: srtData.initialB, tone: 'base' });
+
+                          if (srtData.leadingZeros > 0) {
+                            pLines.push({ kind: 'bits', bits: srtData.normalizedP, tone: 'muted' });
+                            aLines.push({ kind: 'bits', bits: srtData.normalizedA, tone: 'muted' });
+                            bLines.push({ kind: 'bits', bits: srtData.normalizedB, tone: 'muted' });
+                          }
+                        } else {
+                          pLines.push({ kind: 'bits', bits: block.startP, tone: 'base' });
+                          aLines.push({ kind: 'bits', bits: block.startA, tone: 'base' });
+                        }
+
+                        pLines.push({ kind: 'bits', bits: block.shiftedP, tone: 'shift' });
+                        aLines.push({
+                          kind: 'bits',
+                          bits: block.shiftedA,
+                          tone: 'shift',
+                          highlightTail: block.quotientDigits.length,
+                        });
+
+                        if (block.operandBits) {
+                          pLines.push({
+                            kind: 'operand',
+                            bits: block.operandBits,
+                            prefix: block.opLabel === '+B' ? '+' : '-',
+                          });
+                          pLines.push({ kind: 'bits', bits: block.finalP, tone: 'result' });
+                        }
 
                         return (
                           <tr
@@ -568,87 +606,67 @@ export default function SRTDivision() {
                             className={`border-b align-top ${
                               isActive
                                 ? 'table-band-amber'
-                                : 'table-band-slate border-slate-100 dark:border-slate-800'
+                              : 'table-band-slate border-slate-100 dark:border-slate-800'
                             }`}
                           >
-                            <td className="border-r border-slate-200 px-4 py-4 text-center font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                              {block.count}
+                            <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
+                              {renderRegisterLines(pLines)}
                             </td>
 
                             <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
-                              <div className="grid gap-y-2">
-                                <div className="min-h-[24px] flex justify-center">{renderBits(block.startP)}</div>
-                                <div className="min-h-[24px] flex justify-center text-sky-700 dark:text-sky-300">
-                                  {renderBits(block.shiftedP)}
-                                </div>
-                                <div className="min-h-[30px] flex items-center justify-center text-slate-500 dark:text-slate-400">
-                                  {block.operandBits ? (
-                                    <div className="flex items-center gap-3">
-                                      <span className="w-8 text-right text-[15px] font-bold">+</span>
-                                      <div className="border-b-2 border-slate-400 pb-1 dark:border-slate-500">
-                                        {renderBits(block.operandBits)}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs uppercase tracking-[0.2em]">No add/sub</span>
-                                  )}
-                                </div>
-                                <div className="min-h-[24px] flex justify-center font-semibold text-emerald-700 dark:text-emerald-300">
-                                  {renderBits(block.finalP)}
-                                </div>
-                              </div>
+                              {renderRegisterLines(aLines)}
                             </td>
 
                             <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
-                              <div className="grid gap-y-2">
-                                <div className="min-h-[24px] flex justify-center">{renderBits(block.startA)}</div>
-                                <div className="min-h-[24px] flex justify-center text-sky-700 dark:text-sky-300">
-                                  {renderBits(block.shiftedA, block.quotientDigits.length)}
+                              {block.iteration === 0 ? (
+                                <div className="grid gap-y-2">
+                                  {renderRegisterLines(bLines)}
+                                  <div className="min-h-[24px] flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                                    k = {srtData.leadingZeros}
+                                  </div>
                                 </div>
-                                <div className="min-h-[30px] flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
-                                  q digits so far
-                                </div>
-                                <div className="min-h-[24px] flex flex-wrap justify-center gap-1">
-                                  {renderQiDigits(block.quotientDigits, bitSize)}
-                                </div>
-                              </div>
+                              ) : (
+                                <div className="min-h-[120px]" />
+                              )}
                             </td>
 
-                            <td className="border-r border-slate-200 px-4 py-4 text-center dark:border-slate-700">
-                              <span
-                                className={`inline-flex min-w-[3.5rem] items-center justify-center rounded-full px-3 py-1 text-sm font-semibold ${
-                                  block.qDigit === -1
-                                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200'
-                                    : block.qDigit === 1
-                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200'
-                                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                                }`}
-                              >
-                                {formatQi(block.qDigit)}
-                              </span>
-                            </td>
-
-                            <td className="px-4 py-4">
-                              <div className="space-y-3 text-sm not-italic text-slate-700 dark:text-slate-300">
-                                <div className="font-semibold text-slate-900 dark:text-slate-100">
-                                  {block.caseLabel}
-                                </div>
-                                <div>
-                                  Top 3 bits of P: <span className="font-mono">{block.top3}</span>
-                                </div>
-                                <div>{block.caseRule}</div>
-                                <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-slate-950/50">
-                                  Start P = <span className="font-mono">{block.pStartValue}</span>, end P ={' '}
-                                  <span className="font-mono">{block.pFinalValue}</span>
-                                </div>
-                                <div className="inline-flex rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] dark:bg-slate-900/70">
-                                  {block.opLabel}
-                                </div>
+                            <td className="px-4 py-4 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">
+                              <div className="flex min-h-[120px] items-center justify-center">
+                                <span>{block.count}</span>
                               </div>
                             </td>
                           </tr>
                         );
                       })}
+                      {clampedBlockIdx === maxBlockIdx && (
+                        <tr className="border-t-2 border-fuchsia-400/80 bg-fuchsia-50/40 align-top dark:border-fuchsia-400/40 dark:bg-fuchsia-500/5">
+                          <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
+                            {renderRegisterLines([
+                              { kind: 'bits', bits: srtData.finalP, tone: 'base' },
+                              { kind: 'bits', bits: srtData.correctedP, tone: 'result' },
+                            ])}
+                          </td>
+                          <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
+                            <div className="space-y-2 text-center text-sm text-slate-700 dark:text-slate-300">
+                              <div className="font-mono">{quotientTermText}</div>
+                              {srtData.finalNegative && (
+                                <div className="font-mono">{quotientTermText} - 1</div>
+                              )}
+                              <div className="font-semibold text-fuchsia-700 dark:text-fuchsia-300">
+                                q = {srtData.correctedQuotient}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="border-r border-slate-200 px-4 py-4 dark:border-slate-700">
+                            <div className="min-h-[72px] flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                              {srtData.finalNegative ? '+ B' : 'Done'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-center text-sm font-semibold text-fuchsia-700 dark:text-fuchsia-300">
+                            CORRECTION
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -812,3 +830,4 @@ export default function SRTDivision() {
     </div>
   );
 }
+
