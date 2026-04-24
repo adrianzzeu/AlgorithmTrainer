@@ -20,17 +20,17 @@ export default function Home() {
 
   return (
     <div className="home-stage">
-      <div className="page-frame py-8 md:py-10">
-        <section className="surface-card surface-card--hero animate-fade-in-up rounded-[2rem] p-6 md:p-8">
-          <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+      <div className="page-frame py-8 md:py-10 2xl:py-12">
+        <section className="surface-card surface-card--hero animate-fade-in-up rounded-[2rem] p-6 md:p-8 2xl:p-10">
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-end 2xl:gap-10">
             <div>
               <div className="kicker mb-4 inline-flex items-center rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em]">
                 Digital Computers Lab
               </div>
-              <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50 md:text-6xl">
+              <h1 className="max-w-4xl text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50 md:text-6xl 2xl:text-[4.35rem] 2xl:leading-[1.02]">
                 Booth algorithms, without the clutter.
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300 md:text-lg">
+              <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600 dark:text-slate-300 md:text-lg 2xl:text-[1.1rem]">
                 Start with basics, then use the tables.
               </p>
 
@@ -49,7 +49,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 2xl:gap-4">
               <div className="metric-card">
                 <div className="metric-label">Pages</div>
                 <div className="metric-value">{studyRoutes.length}</div>
@@ -81,7 +81,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="stagger-enter grid gap-4 lg:grid-cols-3">
+          <div className="stagger-enter grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {studyRoutes.map((route) => {
               const Icon = ICONS[route.fileName] ?? Binary;
 

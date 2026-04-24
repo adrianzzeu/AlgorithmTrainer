@@ -478,7 +478,7 @@ export default function App() {
     if (!bitStr) return null;
 
     return (
-      <span className={`inline-flex items-center font-mono text-[17px] leading-5 ${color}`}>
+      <span className={`radix3-bits inline-flex items-center font-mono text-[17px] leading-5 ${color}`}>
         {bitStr.split("").map((b, i) => {
           const addGap =
             qGroup
@@ -508,19 +508,19 @@ export default function App() {
   };
 
   const TinyLine = ({ children, color = "text-slate-500", mono = true }) => (
-    <div className={`text-[11px] leading-4 mt-1 ${color} ${mono ? "font-mono" : ""}`}>
+    <div className={`radix3-tiny-line text-[11px] leading-4 mt-1 ${color} ${mono ? "font-mono" : ""}`}>
       {children}
     </div>
   );
 
   const MainSlot = ({ children }) => (
-    <div className="min-h-[32px] w-full flex items-center justify-center">
+    <div className="radix3-main-slot min-h-[32px] w-full flex items-center justify-center">
       {children}
     </div>
   );
 
   const NoteSlot = ({ children }) => (
-    <div className="min-h-[18px] w-full flex items-center justify-center">
+    <div className="radix3-note-slot min-h-[18px] w-full flex items-center justify-center">
       {children}
     </div>
   );
@@ -608,6 +608,7 @@ export default function App() {
   };
 
   const currentEvalCtx = getCurrentEvalCtx();
+  const isFinalView = !!finalProduct && currentStepIdx === steps.length - 1;
 
   const activeBlockId =
     currentStep?.type === "op"
@@ -703,7 +704,7 @@ OUTPUT:
   OUTBUS = Q[bits:1]`;
 
   return (
-    <div className="booth-page min-h-screen">
+    <div className="booth-page booth-radix3-page min-h-screen">
       <div className="workbench-shell flex flex-col xl:flex-row">
         {/* Sidebar */}
         <div className="workbench-sidebar w-full xl:w-96 p-5 shadow-lg xl:min-h-[calc(100vh-7rem)]">
@@ -1184,7 +1185,67 @@ OUTPUT:
         {/* Main */}
         <div className="workbench-main flex-1 overflow-x-auto p-4 md:p-6 xl:p-8">
           <div className="max-w-5xl mx-auto">
-            <div className="summary-banner mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[1.4rem] p-4 text-sm text-slate-700 dark:text-slate-200">
+            <div className="radix3-export-summary mb-4 rounded-[1.35rem] border border-slate-200 bg-white/90 p-4 text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-200">
+              <div className="radix3-export-summary-grid grid gap-3 lg:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    View
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {mode === "integer" ? "Integer" : "Fractional"} | {bitSize} bits
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Auto min {autoBitSize}
+                    {isFractional ? ` | frac ${fracBits}` : ""}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    X / Q
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {mode === "integer" ? xInt : `${qNum}/${qDen}`}
+                  </div>
+                  <div className="mt-1 font-mono text-xs text-slate-600 dark:text-slate-300">
+                    C2 {qC2}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    Y / M
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {mode === "integer" ? yInt : `${mNum}/${mDen}`}
+                  </div>
+                  <div className="mt-1 font-mono text-xs text-slate-600 dark:text-slate-300">
+                    C2 {mC2}
+                  </div>
+                  <div className="mt-1 font-mono text-xs text-rose-600 dark:text-rose-300">
+                    -M {mNegC2}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                    {isFinalView ? "Result" : "Step"}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {isFinalView
+                      ? mode === "fractional"
+                        ? finalProduct.fractionText
+                        : finalProduct.decimal
+                      : currentStep?.count || "Init"}
+                  </div>
+                  <div className="mt-1 font-mono text-xs text-slate-600 dark:text-slate-300">
+                    {isFinalView ? finalProduct.binary : `A[${bitSize - 1}:0].Q[${bitSize}:1]`}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="summary-banner radix3-summary-banner mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[1.4rem] p-4 text-sm text-slate-700 dark:text-slate-200">
               <div className="flex flex-wrap items-center gap-4">
                 <div>
                   <span className="font-semibold">Shift Formula:</span>
@@ -1211,7 +1272,7 @@ OUTPUT:
               </div>
             </div>
 
-            <div className="step-table-surface rounded-[1.5rem] overflow-hidden">
+            <div className="step-table-surface radix3-step-table rounded-[1.5rem] overflow-hidden">
               <table className="w-full text-sm">
                 <colgroup>
                   <col className="w-[90px]" />
@@ -1289,7 +1350,7 @@ OUTPUT:
                                   : "",
                           ].join(" ")}
                         >
-                          <td className="py-3 px-3 text-center text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 align-top font-mono text-[16px]">
+                          <td className="radix3-count-cell py-3 px-3 text-center text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 align-top font-mono text-[16px]">
                             {block.count}
                           </td>
 
@@ -1306,7 +1367,7 @@ OUTPUT:
 
                           <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
                             {hasOp ? (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
                                   {renderBits(block.preState.A, { highlightMsb: true })}
                                 </MainSlot>
@@ -1356,7 +1417,7 @@ OUTPUT:
                                 </MainSlot>
                               </div>
                             ) : (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
                                   {renderBits(block.preState.A, { highlightMsb: true })}
                                 </MainSlot>
@@ -1379,7 +1440,7 @@ OUTPUT:
 
                           <td className="table-band-emerald py-3 px-2 text-center border-r border-slate-200 dark:border-slate-700 align-top">
                             {hasOp ? (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
                                   <div className="font-mono text-[18px] font-bold table-text-emerald">
                                     {block.preState.Q_extra}
@@ -1398,7 +1459,7 @@ OUTPUT:
                                 </MainSlot>
                               </div>
                             ) : (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
                                   <div className="font-mono text-[18px] font-bold table-text-emerald">
                                     {block.preState.Q_extra}
@@ -1421,7 +1482,7 @@ OUTPUT:
 
                           <td className="py-3 px-4 border-r border-slate-200 dark:border-slate-700 align-top">
                             {hasOp ? (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
                                   {renderBits(block.preState.Q, {
                                     highlightMsb: true,
@@ -1461,7 +1522,7 @@ OUTPUT:
                                 </NoteSlot>
                               </div>
                             ) : (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
                                   {renderBits(block.preState.Q, {
                                     highlightMsb: true,
@@ -1505,9 +1566,9 @@ OUTPUT:
 
                           <td className="py-3 px-3 text-center border-r border-slate-200 dark:border-slate-700 align-top">
                             {hasOp ? (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
-                                  <div className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+                                  <div className="radix3-r-pill inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
                                     {block.preState.R}
                                   </div>
                                 </MainSlot>
@@ -1526,7 +1587,7 @@ OUTPUT:
                                   {showPost && (
                                     <div
                                       className={[
-                                        "inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
+                                        "radix3-r-pill inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
                                         block.isFinal
                                           ? "border-emerald-400/70 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200"
                                           : "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
@@ -1538,10 +1599,10 @@ OUTPUT:
                                 </MainSlot>
                               </div>
                             ) : (
-                              <div className="grid w-full gap-y-1.5 justify-items-center">
+                              <div className="radix3-block-stack grid w-full gap-y-1.5 justify-items-center">
                                 <MainSlot>
                                   <div
-                                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200"
+                                    className="radix3-r-pill inline-flex h-7 w-7 items-center justify-center rounded-full border border-violet-400/70 bg-violet-50 font-mono text-[18px] font-bold text-violet-700 dark:bg-violet-500/10 dark:text-violet-200"
                                   >
                                     {block.preState.R}
                                   </div>
@@ -1561,7 +1622,7 @@ OUTPUT:
                                   {showShiftedState && (
                                     <div
                                       className={[
-                                        "inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
+                                        "radix3-r-pill inline-flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[18px] font-bold",
                                         block.isFinal
                                           ? "border-emerald-400/70 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200"
                                           : "border-violet-400/70 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
@@ -1576,16 +1637,16 @@ OUTPUT:
                           </td>
 
                           <td className="py-3 px-4 text-center align-top">
-                            <div className="flex flex-col items-center gap-1.5">
+                            <div className="radix3-m-stack flex flex-col items-center gap-1.5">
                               {block.blockId === 0 && (
-                                <>
+                                <div className="radix3-m-register-lines">
                                   <TinyLine color="text-slate-600 dark:text-slate-300">
                                     {"M = " + mC2}
                                   </TinyLine>
                                   <TinyLine color="text-slate-600 dark:text-slate-300">
                                     {"-M = " + mNegC2}
                                   </TinyLine>
-                                </>
+                                </div>
                               )}
 
                               {showOp ? (
@@ -1630,7 +1691,7 @@ OUTPUT:
             </div>
 
             {currentEvalCtx && (
-              <div className="mt-4 flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-950/50">
+              <div className="radix3-eval-strip mt-4 flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-950/50">
                 <span className="font-semibold text-slate-700 dark:text-slate-200">Evaluating:</span>
 
                 <span className="context-chip font-mono rounded px-2 py-1">

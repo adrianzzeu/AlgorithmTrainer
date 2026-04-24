@@ -460,8 +460,8 @@ export default function SRT4Division() {
 
   return (
     <div className="booth-page min-h-screen">
-      <div className="workbench-shell flex flex-col xl:flex-row">
-        <div className="workbench-sidebar w-full p-5 shadow-lg xl:min-h-[calc(100vh-7rem)] xl:w-96">
+      <div className="workbench-shell srt4-workbench flex flex-col xl:flex-row">
+        <div className="workbench-sidebar srt4-sidebar w-full p-4 shadow-lg sm:p-5 xl:min-h-[calc(100vh-7rem)] xl:w-[24rem] 2xl:w-[26rem]">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-2xl border border-slate-200 bg-white/70 p-2.5 dark:border-slate-700 dark:bg-slate-950/50">
               <Cpu className="h-5 w-5 text-slate-700 dark:text-slate-200" />
@@ -474,7 +474,7 @@ export default function SRT4Division() {
             </div>
           </div>
 
-          <div className="mb-5 space-y-3">
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Dividend (A)
@@ -505,7 +505,7 @@ export default function SRT4Division() {
                 className={inputClass}
               />
             </div>
-            <div>
+            <div className="sm:col-span-2 xl:col-span-1">
               <label className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Bit Width
               </label>
@@ -568,15 +568,15 @@ export default function SRT4Division() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <span>P (start)</span>
-                    <span className="font-mono">{srtData.initialP}</span>
+                    <span className="font-mono text-xs sm:text-sm">{srtData.initialP}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span>A (start)</span>
-                    <span className="font-mono">{srtData.initialA}</span>
+                    <span className="font-mono text-xs sm:text-sm">{srtData.initialA}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span>B (start)</span>
-                    <span className="font-mono">{srtData.initialB}</span>
+                    <span className="font-mono text-xs sm:text-sm">{srtData.initialB}</span>
                   </div>
                   <div className="border-t border-slate-200 pt-2 dark:border-slate-700">
                     <div className="flex items-center justify-between gap-3">
@@ -585,27 +585,27 @@ export default function SRT4Division() {
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <span>B {'<<'} k (unsigned)</span>
-                      <span className="font-mono">{srtData.normalizedB}</span>
+                      <span className="font-mono text-xs sm:text-sm">{srtData.normalizedB}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <span>b selector</span>
-                      <span className="font-mono">{srtData.bNibble} ({srtData.normalizedB.slice(0, 4)})</span>
+                      <span className="font-mono text-xs sm:text-sm">{srtData.bNibble} ({srtData.normalizedB.slice(0, 4)})</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <span>+B word (P width)</span>
-                      <span className="font-mono">{srtData.normalizedBWide}</span>
+                      <span className="font-mono text-xs sm:text-sm">{srtData.normalizedBWide}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <span>-B (C2, P width)</span>
-                      <span className="font-mono">{srtData.negNormalizedBWide}</span>
+                      <span className="font-mono text-xs sm:text-sm">{srtData.negNormalizedBWide}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <span>+2B word (P width)</span>
-                      <span className="font-mono">{srtData.pos2BWide}</span>
+                      <span className="font-mono text-xs sm:text-sm">{srtData.pos2BWide}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <span>-2B (C2, P width)</span>
-                      <span className="font-mono">{srtData.neg2BWide}</span>
+                      <span className="font-mono text-xs sm:text-sm">{srtData.neg2BWide}</span>
                     </div>
                   </div>
                 </div>
@@ -617,7 +617,7 @@ export default function SRT4Division() {
                   <span>b = {srtData.bNibble}</span>
                 </div>
                 <div className="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-slate-950/50">
-                  <span className="font-semibold">top6(P)</span>: <span className="font-mono">{currentBlock?.selectorPBits ?? '000000'}</span>{' '}
+                  <span className="font-semibold">top6(P)</span>: <span className="font-mono text-[11px] sm:text-xs">{currentBlock?.selectorPBits ?? '000000'}</span>{' '}
                   = <span className="font-semibold">{currentBlock?.selectorPValue ?? 0}</span>
                 </div>
                 <div className="space-y-2">
@@ -707,7 +707,7 @@ export default function SRT4Division() {
           )}
         </div>
 
-        <div className="flex-1 p-5">
+        <div className="workbench-main srt4-main min-w-0 flex-1 p-3 sm:p-4 xl:p-5">
           {srtData ? (
             <>
               <div className="surface-card mb-5 rounded-[1.5rem] p-4">
@@ -733,9 +733,9 @@ export default function SRT4Division() {
                 </div>
               </div>
 
-              <div className="table-shell overflow-hidden rounded-[1.6rem] border border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/60">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border-collapse">
+              <div className="table-shell srt4-table-shell overflow-hidden rounded-[1.6rem] border border-slate-200 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/60">
+                <div className="overflow-x-auto overscroll-x-contain">
+                  <table className="w-full min-w-[58rem] border-collapse lg:min-w-[64rem]">
                     <thead>
                       <tr className="bg-slate-50/90 dark:bg-slate-900/80">
                         <th className="border-r border-slate-200 px-4 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -961,7 +961,7 @@ export default function SRT4Division() {
                   </table>
                 </div>
 
-                <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
                   <div className="surface-card rounded-[1.35rem] p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">

@@ -145,10 +145,10 @@ img {
 }
 
 .page-frame {
-  width: min(100%, 1380px);
+  width: min(100%, 1440px);
   margin: 0 auto;
-  padding-left: clamp(1rem, 2vw, 1.5rem);
-  padding-right: clamp(1rem, 2vw, 1.5rem);
+  padding-left: clamp(1rem, 2vw, 1.75rem);
+  padding-right: clamp(1rem, 2vw, 1.75rem);
 }
 
 .glass-surface {
@@ -269,6 +269,7 @@ img {
 }
 
 .nav-link,
+.export-toggle,
 .theme-toggle,
 .mobile-toggle,
 .cta-button {
@@ -294,7 +295,18 @@ img {
   border: 1px solid transparent;
 }
 
+.export-toggle {
+  min-height: 2.7rem;
+  padding: 0 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .nav-link:hover,
+.export-toggle:hover,
 .theme-toggle:hover,
 .mobile-toggle:hover {
   color: var(--text);
@@ -303,12 +315,20 @@ img {
 }
 
 .light .nav-link:hover,
+.light .export-toggle:hover,
 .light .theme-toggle:hover,
 .light .mobile-toggle:hover {
   background: rgba(17, 24, 32, 0.04);
 }
 
 .nav-link-active {
+  color: var(--text);
+  background: rgba(157, 193, 255, 0.08);
+  border-color: rgba(157, 193, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.export-toggle-active {
   color: var(--text);
   background: rgba(157, 193, 255, 0.08);
   border-color: rgba(157, 193, 255, 0.16);
@@ -327,6 +347,193 @@ img {
 .light .theme-toggle,
 .light .mobile-toggle {
   background: rgba(17, 24, 32, 0.02);
+}
+
+html.export-mode {
+  font-size: 17px;
+}
+
+.export-mode .footer-shell {
+  display: none;
+}
+
+.export-mode .page-frame {
+  width: min(100%, 2200px);
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.export-mode .nav-shell {
+  position: sticky;
+}
+
+.export-mode .booth-page .workbench-shell,
+.export-mode .learning-lab .workbench-shell {
+  width: min(100%, 2400px);
+  gap: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 1rem;
+}
+
+.export-mode .booth-page .workbench-shell {
+  flex-direction: column;
+}
+
+.export-mode .booth-page .workbench-sidebar,
+.export-mode .learning-lab .workbench-sidebar {
+  position: static !important;
+  width: 100% !important;
+  max-width: none;
+  align-self: stretch;
+}
+
+.export-mode .booth-page .workbench-shell > :last-child,
+.export-mode .learning-lab .workbench-shell > :last-child {
+  width: 100%;
+  min-width: 0;
+}
+
+.export-mode .booth-page .summary-banner,
+.export-mode .booth-page .table-shell,
+.export-mode .booth-page .step-table-surface,
+.export-mode .booth-page .truth-table-surface,
+.export-mode .learning-lab .surface-card,
+.export-mode .learning-lab .page-hero {
+  max-width: none;
+}
+
+.export-mode .booth-page table,
+.export-mode .learning-lab table {
+  font-size: 1rem;
+}
+
+.export-mode .booth-page [class*='text-[10px]'],
+.export-mode .learning-lab [class*='text-[10px]'] {
+  font-size: 0.82rem;
+  line-height: 1.18rem;
+}
+
+.export-mode .booth-page [class*='text-[11px]'],
+.export-mode .learning-lab [class*='text-[11px]'] {
+  font-size: 0.9rem;
+  line-height: 1.22rem;
+}
+
+.export-mode .booth-page [class*='text-[17px]'],
+.export-mode .learning-lab [class*='text-[17px]'] {
+  font-size: 1.2rem;
+  line-height: 1.55rem;
+}
+
+.export-mode .booth-page input[type='number'],
+.export-mode .booth-page input[type='text'],
+.export-mode .booth-page select,
+.export-mode .learning-lab input[type='number'],
+.export-mode .learning-lab input[type='text'],
+.export-mode .learning-lab select {
+  min-height: 3rem;
+  font-size: 1rem;
+}
+
+.export-mode .booth-page table th,
+.export-mode .booth-page table td,
+.export-mode .learning-lab table th,
+.export-mode .learning-lab table td {
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+}
+
+.radix3-export-summary {
+  display: none;
+}
+
+.export-mode .booth-radix3-page .workbench-shell {
+  display: block;
+  width: min(100%, 1880px);
+  padding-top: 0.45rem;
+  padding-bottom: 0.75rem;
+}
+
+.export-mode .booth-radix3-page .workbench-sidebar {
+  display: none !important;
+}
+
+.export-mode .booth-radix3-page .workbench-main {
+  padding: 0.2rem 0 0.45rem;
+}
+
+.export-mode .booth-radix3-page .workbench-main > .max-w-5xl {
+  max-width: none;
+}
+
+.export-mode .booth-radix3-page .radix3-export-summary {
+  display: block;
+}
+
+.export-mode .booth-radix3-page .radix3-summary-banner,
+.export-mode .booth-radix3-page .radix3-eval-strip {
+  display: none;
+}
+
+.export-mode .booth-radix3-page .radix3-step-table table {
+  font-size: 0.88rem;
+}
+
+.export-mode .booth-radix3-page .radix3-step-table th,
+.export-mode .booth-radix3-page .radix3-step-table td {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+.export-mode .booth-radix3-page .radix3-block-stack,
+.export-mode .booth-radix3-page .radix3-m-stack {
+  gap: 0.18rem;
+}
+
+.export-mode .booth-radix3-page .radix3-main-slot {
+  min-height: 1.35rem;
+}
+
+.export-mode .booth-radix3-page .radix3-note-slot {
+  min-height: 0;
+}
+
+.export-mode .booth-radix3-page .radix3-note-slot .radix3-tiny-line,
+.export-mode .booth-radix3-page .radix3-m-register-lines {
+  display: none;
+}
+
+.export-mode .booth-radix3-page .radix3-bits {
+  font-size: 0.92rem;
+  line-height: 1.05rem;
+}
+
+.export-mode .booth-radix3-page .radix3-bits > span {
+  width: 0.92rem;
+}
+
+.export-mode .booth-radix3-page .radix3-tiny-line {
+  margin-top: 0.08rem;
+  font-size: 0.62rem;
+  line-height: 0.76rem;
+}
+
+.export-mode .booth-radix3-page .radix3-r-pill {
+  width: 1.45rem;
+  height: 1.45rem;
+  font-size: 0.95rem;
+}
+
+.export-mode .booth-radix3-page .radix3-count-cell,
+.export-mode .booth-radix3-page .radix3-step-table [class*='text-[18px]'] {
+  font-size: 0.95rem;
+  line-height: 1.05rem;
+}
+
+@media (max-width: 1200px) {
+  .export-mode .booth-radix3-page .radix3-export-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .nav-mobile-grid {
@@ -494,10 +701,10 @@ img {
 
 .workbench-shell {
   display: flex;
-  width: min(100%, 1520px);
-  gap: 1.25rem;
+  width: min(100%, 1640px);
+  gap: clamp(1rem, 1.8vw, 1.4rem);
   margin: 0 auto;
-  padding: 1rem clamp(1rem, 2vw, 1.5rem) 1.5rem;
+  padding: clamp(0.75rem, 1.8vw, 1.1rem) clamp(0.85rem, 2vw, 1.75rem) clamp(1rem, 2vw, 1.75rem);
 }
 
 .workbench-sidebar {
@@ -508,6 +715,24 @@ img {
 
 .workbench-main {
   min-width: 0;
+}
+
+.table-shell {
+  width: 100%;
+  max-width: 100%;
+}
+
+.table-shell > .overflow-x-auto {
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.workbench-main > .surface-card,
+.workbench-main > .table-shell,
+.workbench-main > .summary-banner,
+.workbench-main > .truth-table-surface,
+.workbench-main > .step-table-surface {
+  max-width: 100%;
 }
 
 .summary-banner {
@@ -762,7 +987,190 @@ img {
   }
 }
 
+@media (min-width: 1536px) {
+  .page-frame {
+    width: min(100%, 1560px);
+  }
+
+  .workbench-shell {
+    width: min(100%, 1760px);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .page-frame {
+    width: min(100%, 1680px);
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .workbench-shell {
+    width: min(100%, 1880px);
+    gap: 1.65rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .surface-card--hero {
+    box-shadow: 0 34px 100px rgba(0, 0, 0, 0.36);
+  }
+
+  html.export-mode {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 2200px) {
+  html {
+    font-size: 17px;
+  }
+
+  .page-frame {
+    width: min(100%, 2160px);
+    padding-left: 2.4rem;
+    padding-right: 2.4rem;
+  }
+
+  .workbench-shell {
+    width: min(100%, 2680px);
+    gap: 1.85rem;
+    padding-left: 2.4rem;
+    padding-right: 2.4rem;
+  }
+
+  .booth-page .workbench-sidebar,
+  .learning-lab .workbench-sidebar {
+    width: 28rem;
+  }
+
+  .booth-page [class~='text-sm'],
+  .learning-lab [class~='text-sm'] {
+    font-size: 1rem;
+    line-height: 1.55rem;
+  }
+
+  .booth-page [class~='text-lg'],
+  .learning-lab [class~='text-lg'] {
+    font-size: 1.2rem;
+    line-height: 1.8rem;
+  }
+
+  .booth-page [class*='text-[10px]'],
+  .learning-lab [class*='text-[10px]'] {
+    font-size: 0.82rem;
+    line-height: 1.15rem;
+  }
+
+  .booth-page [class*='text-[11px]'],
+  .learning-lab [class*='text-[11px]'] {
+    font-size: 0.9rem;
+    line-height: 1.2rem;
+  }
+
+  .booth-page [class*='text-[17px]'],
+  .learning-lab [class*='text-[17px]'] {
+    font-size: 1.2rem;
+    line-height: 1.55rem;
+  }
+
+  .booth-page input[type='number'],
+  .booth-page input[type='text'],
+  .booth-page select,
+  .learning-lab input[type='number'],
+  .learning-lab input[type='text'],
+  .learning-lab select {
+    min-height: 3rem;
+    font-size: 1rem;
+  }
+
+  .booth-page table th,
+  .booth-page table td,
+  .learning-lab table th,
+  .learning-lab table td {
+    padding-top: 0.95rem;
+    padding-bottom: 0.95rem;
+  }
+}
+
+@media (min-width: 2800px) {
+  html {
+    font-size: 18px;
+  }
+
+  .page-frame {
+    width: min(100%, 2520px);
+    padding-left: 2.75rem;
+    padding-right: 2.75rem;
+  }
+
+  .workbench-shell {
+    width: min(100%, 3240px);
+    gap: 2rem;
+    padding-left: 2.75rem;
+    padding-right: 2.75rem;
+  }
+
+  .booth-page .workbench-sidebar,
+  .learning-lab .workbench-sidebar {
+    width: 30rem;
+  }
+
+  .booth-page [class~='text-sm'],
+  .learning-lab [class~='text-sm'] {
+    font-size: 1.06rem;
+    line-height: 1.65rem;
+  }
+
+  .booth-page [class*='text-[10px]'],
+  .learning-lab [class*='text-[10px]'] {
+    font-size: 0.88rem;
+    line-height: 1.2rem;
+  }
+
+  .booth-page [class*='text-[11px]'],
+  .learning-lab [class*='text-[11px]'] {
+    font-size: 0.96rem;
+    line-height: 1.25rem;
+  }
+
+  .booth-page [class*='text-[17px]'],
+  .learning-lab [class*='text-[17px]'] {
+    font-size: 1.28rem;
+    line-height: 1.65rem;
+  }
+
+  .booth-page input[type='number'],
+  .booth-page input[type='text'],
+  .booth-page select,
+  .learning-lab input[type='number'],
+  .learning-lab input[type='text'],
+  .learning-lab select {
+    min-height: 3.2rem;
+    font-size: 1.05rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .workbench-sidebar {
+    border-radius: 1.5rem;
+  }
+
+  .table-shell {
+    border-radius: 1.35rem;
+  }
+}
+
 @media (max-width: 767px) {
+  .workbench-shell {
+    gap: 0.9rem;
+    padding: 0.7rem 0.75rem 1rem;
+  }
+
+  .workbench-sidebar {
+    border-radius: 1.35rem;
+  }
+
   .route-card {
     padding: 1.15rem;
   }
@@ -773,5 +1181,17 @@ img {
 
   .nav-panel {
     border-radius: 1.3rem;
+  }
+
+  .srt4-table-shell th,
+  .srt4-table-shell td {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .export-toggle {
+    min-height: 2.5rem;
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
   }
 }

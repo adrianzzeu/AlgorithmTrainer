@@ -15,7 +15,7 @@ const ROUTE_ICONS = {
   SRT4Division: Cpu,
 };
 
-export default function Navbar() {
+export default function Navbar({ isExportMode = false, toggleExportMode }) {
   const location = useLocation();
   const [theme, toggleTheme] = useDarkMode();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -62,6 +62,15 @@ export default function Navbar() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={toggleExportMode}
+              className={`export-toggle ${isExportMode ? 'export-toggle-active' : ''}`}
+              aria-label="Toggle export mode"
+            >
+              <span className="hidden sm:inline">{isExportMode ? 'Exit Export' : 'Export'}</span>
+              <span className="sm:hidden">{isExportMode ? 'Exit' : 'Exp'}</span>
+            </button>
+
+            <button
               onClick={toggleTheme}
               className="theme-toggle"
               aria-label="Toggle color theme"
@@ -85,6 +94,28 @@ export default function Navbar() {
           }`}
         >
           <div className="nav-mobile-grid grid gap-2 px-1 pt-3">
+            <button
+              onClick={() => {
+                toggleExportMode();
+                closeMobileMenu();
+              }}
+              className={`nav-mobile-item text-left ${isExportMode ? 'nav-mobile-item-active' : ''}`}
+            >
+              <div className="flex items-start gap-3">
+                <span className="nav-icon-chip mt-0.5">
+                  <Cpu className="h-4 w-4" />
+                </span>
+                <div>
+                  <div className="font-semibold text-slate-900 dark:text-slate-100">
+                    {isExportMode ? 'Exit Export Mode' : 'Enter Export Mode'}
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    Widen the algorithm pages and make the table view easier to export.
+                  </div>
+                </div>
+              </div>
+            </button>
+
             {navRoutes.map((route) => {
               const Icon = ROUTE_ICONS[route.fileName] ?? Binary;
 
